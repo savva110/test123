@@ -1,121 +1,295 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Telegram WebApp — без проверки</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Web App1</title>
     <style>
-        :root{
-            --bg: var(--tg-theme-bg-color, #ffffff);
-            --text: var(--tg-theme-text-color, #0b1220);
-            --muted: #6b7280;
-            --card: var(--tg-theme-secondary-bg-color, #f3f4f6);
-            --btn: var(--tg-theme-button-color, #2481cc);
-            --btn-text: var(--tg-theme-button-text-color, #ffffff);
-        }
-        body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:var(--bg);color:var(--text);padding:18px}
-        .container{max-width:720px;margin:0 auto}
-        h1{font-size:20px;margin:0 0 12px}
-        .card{background:var(--card);padding:14px;border-radius:12px;margin-bottom:12px}
-        .user-card{margin-bottom:12px}
-        label{font-weight:600;font-size:13px;margin-bottom:6px;display:block}
-        textarea{width:100%;min-height:96px;padding:12px;border-radius:10px;border:1px solid rgba(0,0,0,0.08);resize:vertical;font-size:15px}
-        .controls{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
-        button{background:var(--btn);color:var(--btn-text);border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:600}
-        .secondary{background:transparent;border:1px solid rgba(0,0,0,0.08);color:var(--text)}
-        .features{margin-top:10px;font-size:13px;color:var(--muted)}
-        .status{margin-top:12px;padding:10px;border-radius:8px;font-weight:600}
-        .status.success{background:#d4edda;color:#155724;border:1px solid #c3e6cb}
-        .status.error{background:#f8d7da;color:#721c24;border:1px solid #f5c6cb}
-        .status.loading{background:#fff3cd;color:#856404;border:1px solid #ffeeba}
+        body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--tg-theme-bg-color, #ffffff);
+    color: var(--tg-theme-text-color, #000000);
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+#app {
+    display: none;
+}
+
+#login-warning {
+    text-align: center;
+    padding: 40px 20px;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 15px;
+    margin-top: 50px;
+}
+
+.user-card {
+    background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+    border-left: 4px solid var(--tg-theme-button-color, #2481cc);
+}
+
+.user-card h3 {
+    margin-top: 0;
+    color: var(--tg-theme-button-color, #2481cc);
+}
+
+textarea {
+    width: 100%;
+    height: 100px;
+    padding: 15px;
+    border: 2px solid var(--tg-theme-hint-color, #cccccc);
+    border-radius: 12px;
+    margin-bottom: 15px;
+    font-family: inherit;
+    font-size: 16px;
+    resize: vertical;
+}
+
+button {
+    background: var(--tg-theme-button-color, #2481cc);
+    color: var(--tg-theme-button-text-color, #ffffff);
+    border: none;
+    padding: 15px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 500;
+    margin: 5px 0;
+    width: 100%;
+    transition: transform 0.2s, opacity 0.2s;
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+.features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.status {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    font-weight: 500;
+}
+
+.status.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.status.loading {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+code {
+    background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+}
+
+@media (max-width: 480px) {
+    .features {
+        grid-template-columns: 1fr;
+    }
+    
+    body {
+        padding: 15px;
+    }
+}
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>🤖 WebApp — отправка без закрытия</h1>
-
-    <div id="app" class="card">
-        <div id="user-info" class="user-card"></div>
-
-        <label for="messageText">Сообщение</label>
-        <textarea id="messageText" placeholder="Напиши что-нибудь..."></textarea>
-
-        <div class="controls">
-            <button id="sendBtn">📨 Отправить</button>
-            <button id="sendTimeBtn" class="secondary">🕒 Время</button>
-            <button id="sendRandBtn" class="secondary">🎲 Случайное</button>
+    <div class="container">
+        <div id="app">
+            <h1>🤖 Мое приложение</h1>
+            <div id="user-info"></div>
+            
+            <textarea id="messageText" placeholder="Введите ваше сообщение..."></textarea>
+            <button onclick="sendMessage()">📨 Отправить себе сообщение</button>
+            
+            <div class="features">
+                <button onclick="sendTime()">🕒 Отправить время</button>
+                <button onclick="sendRandom()">🎲 Случайное число</button>
+            </div>
+            
+            <div id="status"></div>
         </div>
 
-        <div class="features">
-            Текущий URL: <code id="current-url"></code>
+        <div id="login-warning">
+            <p>⚠️ Откройте это приложение через Telegram бота для полного функционала</p>
+            <p>Текущий URL: <span id="current-url"></span></p>
         </div>
-
-        <div id="status" class="status"></div>
     </div>
-</div>
 
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script>
-    const tg = window.Telegram?.WebApp;
-    const statusEl = document.getElementById('status');
-    const currentUrlEl = document.getElementById('current-url');
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        // Глобальные переменные
+let tg = window.Telegram.WebApp;
+let userData = null;
 
-    function showStatus(text, type='success', auto=true){
-        statusEl.textContent = text;
-        statusEl.className = 'status ' + (type || '');
-        if(auto && type !== 'loading'){
-            setTimeout(()=>{ statusEl.textContent=''; statusEl.className='status'; }, 3000);
-        }
+// Инициализация приложения
+function initApp() {
+    showCurrentUrl();
+    
+    if (isTelegramWebApp()) {
+        initTelegramWebApp();
+    } else {
+        showNonTelegramWarning();
+    }
+}
+
+// Проверяем, открыто ли в Telegram Web App
+function isTelegramWebApp() {
+    return tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+}
+
+// Инициализация Telegram Web App
+function initTelegramWebApp() {
+    userData = tg.initDataUnsafe.user;
+    
+    document.getElementById('login-warning').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    
+    displayUserInfo();
+    setupTelegramFeatures();
+}
+
+// Отображение информации о пользователе
+function displayUserInfo() {
+    const userInfoDiv = document.getElementById('user-info');
+    
+    userInfoDiv.innerHTML = `
+        <div class="user-card">
+            <h3>👤 Ваш профиль</h3>
+            <p><strong>ID:</strong> <code>${userData.id}</code></p>
+            <p><strong>Имя:</strong> ${userData.first_name} ${userData.last_name || ''}</p>
+            ${userData.username ? `<p><strong>Username:</strong> @${userData.username}</p>` : ''}
+            <p><strong>Язык:</strong> ${userData.language_code || 'не указан'}</p>
+        </div>
+    `;
+}
+
+// Настройка функций Telegram
+function setupTelegramFeatures() {
+    // Показываем основную кнопку
+    tg.MainButton.setText("Отправить сообщение");
+    tg.MainButton.show();
+    tg.MainButton.onClick(sendMessage);
+    
+    // Расширяем приложение на весь экран
+    tg.expand();
+}
+
+// Отправка сообщения
+async function sendMessage() {
+    const messageText = document.getElementById('messageText').value.trim();
+    
+    if (!messageText) {
+        showStatus('Введите текст сообщения', 'error');
+        return;
     }
 
-    function initApp(){
-        currentUrlEl.textContent = window.location.href;
+    showStatus('Отправка...', 'loading');
 
-        if(tg?.initDataUnsafe?.user){
-            const u = tg.initDataUnsafe.user;
-            document.getElementById('user-info').innerHTML = `
-                <div><strong>ID:</strong> ${u.id}</div>
-                <div><strong>Имя:</strong> ${u.first_name || ''} ${u.last_name || ''}</div>
-                ${u.username ? `<div><strong>Username:</strong> @${u.username}</div>`:''}
-            `;
-        }
-        try{ tg.expand(); }catch(e){}
+    try {
+        // Отправляем данные через Telegram Web App
+        tg.sendData(JSON.stringify({
+            action: 'send_message',
+            text: messageText,
+            timestamp: new Date().toISOString()
+        }));
+        
+        showStatus('✅ Сообщение отправлено! Проверьте Telegram', 'success');
+        document.getElementById('messageText').value = '';
+        
+    } catch (error) {
+        showStatus('❌ Ошибка отправки', 'error');
+        console.error('Error:', error);
     }
+}
 
-    function sendMessage(){
-        const text = document.getElementById('messageText').value.trim();
-        if(!text){ showStatus('Введите текст', 'error'); return; }
-        const payload = { action:'send_message', text, timestamp:new Date().toISOString() };
+// Предопределенные сообщения
+function sendTime() {
+    const time = new Date().toLocaleString('ru-RU', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+    
+    document.getElementById('messageText').value = `🕒 Текущее время: ${time}`;
+    sendMessage();
+}
 
-        showStatus('Отправка...', 'loading', false);
+function sendRandom() {
+    const randomNum = Math.floor(Math.random() * 100) + 1;
+    document.getElementById('messageText').value = `🎲 Случайное число: ${randomNum}`;
+    sendMessage();
+}
 
-        if(typeof tg?.postEvent === 'function'){
-            tg.postEvent('web_app_data', JSON.stringify(payload));
-            showStatus('✅ Отправлено (postEvent, без закрытия)', 'success');
-        } else if(typeof tg?.sendData === 'function'){
-            tg.postEvent(JSON.stringify(payload));
-            showStatus('✅ Отправлено (sendData, может закрыть)', 'success', false);
-        } else {
-            showStatus('Метод недоступен', 'error');
-        }
-        document.getElementById('messageText').value='';
+// Показываем текущий URL (для отладки)
+function showCurrentUrl() {
+    document.getElementById('current-url').textContent = window.location.href;
+}
+
+// Предупреждение для не-Telegram окружения
+function showNonTelegramWarning() {
+    document.getElementById('login-warning').style.display = 'block';
+    document.getElementById('app').style.display = 'none';
+}
+
+// Показать статус
+function showStatus(message, type) {
+    const status = document.getElementById('status');
+    status.textContent = message;
+    status.className = `status ${type}`;
+    
+    // Автоматически скрываем статус через 3 секунды
+    if (type !== 'loading') {
+        setTimeout(() => {
+            status.textContent = '';
+            status.className = 'status';
+        }, 3000);
     }
+}
 
-    function sendTime(){
-        document.getElementById('messageText').value = "🕒 Время: " + new Date().toLocaleString();
-        sendMessage();
-    }
-
-    function sendRand(){
-        document.getElementById('messageText').value = "🎲 Случайное число: " + (Math.floor(Math.random()*100)+1);
-        sendMessage();
-    }
-
-    document.getElementById('sendBtn').onclick = sendMessage;
-    document.getElementById('sendTimeBtn').onclick = sendTime;
-    document.getElementById('sendRandBtn').onclick = sendRand;
-
-    window.addEventListener('DOMContentLoaded', initApp);
-</script>
+// Запускаем приложение при загрузке
+window.addEventListener('DOMContentLoaded', initApp);
+    </script>
 </body>
 </html>
