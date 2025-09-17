@@ -161,11 +161,10 @@
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
-// Инициализация Telegram Web App
 let tg = window.Telegram?.WebApp;
 let userData = null;
 
-// Показ текущего URL (для предупреждения)
+// Показ текущего URL
 function showCurrentUrl() {
     const currentUrl = window.location.href;
     document.getElementById('current-url').textContent = currentUrl;
@@ -210,8 +209,14 @@ function displayUserInfo() {
 
 // Информация о платформе Telegram
 function addPlatformInfo() {
-    const platform = tg.platform || 'unknown';
-    const version = tg.version || 'unknown';
+    let platform = tg?.platform || 'unknown';
+    let version = tg?.version || 'unknown';
+
+    // Если Desktop и нет данных в tg, берем из hash
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    if (hashParams.get('tgWebAppPlatform')) platform = hashParams.get('tgWebAppPlatform');
+    if (hashParams.get('tgWebAppVersion')) version = hashParams.get('tgWebAppVersion');
+
     const userInfoDiv = document.getElementById('user-info');
 
     userInfoDiv.innerHTML += `
@@ -240,14 +245,18 @@ function sendMessage() {
     showStatus('Отправка...', 'loading');
 
     try {
-        tg.sendData(JSON.stringify({
-            action: 'send_message',
-            text: messageText,
-            timestamp: new Date().toISOString(),
-            user_id: userData.id
-        }));
-        showStatus('✅ Сообщение отправлено! Проверьте Telegram', 'success');
-        document.getElementById('messageText').value = '';
+        if (tg) {
+            tg.sendData(JSON.stringify({
+                action: 'send_message',
+                text: messageText,
+                timestamp: new Date().toISOString(),
+                user_id: userData.id
+            }));
+            showStatus('✅ Сообщение отправлено! Проверьте Telegram', 'success');
+            document.getElementById('messageText').value = '';
+        } else {
+            showStatus('ℹ️ Откройте бота в Telegram для отправки сообщения', 'info');
+        }
     } catch (e) {
         showStatus('❌ Ошибка отправки', 'error');
         console.error(e);
@@ -276,23 +285,39 @@ function sendRandom() {
     sendMessage();
 }
 
+// Получение user из hash (для Desktop Telegram)
+function getUserFromHash() {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const dataStr = hashParams.get('tgWebAppData');
+    if (!dataStr) return null;
+    try {
+        const data = JSON.parse(decodeURIComponent(dataStr));
+        return data.user || null;
+    } catch(e) {
+        console.error('Ошибка парсинга tgWebAppData', e);
+        return null;
+    }
+}
+
 // Инициализация приложения
 function initApp() {
     showCurrentUrl();
 
-    if (!tg) {
+    // Если есть Telegram JS SDK
+    if (tg) tg.ready();
+
+    // Попытка получить user из tg.initDataUnsafe
+    if (tg?.initDataUnsafe?.user) {
+        userData = tg.initDataUnsafe.user;
+    } else {
+        // Попытка получить user из hash (Desktop Telegram)
+        userData = getUserFromHash();
+    }
+
+    if (!userData) {
         showNonTelegramWarning();
         return;
     }
-
-    tg.ready(); // Инициализация WebApp
-
-    if (!tg.initDataUnsafe?.user) {
-        showNonTelegramWarning();
-        return;
-    }
-
-    userData = tg.initDataUnsafe.user;
 
     // Показ основной части приложения
     document.getElementById('login-warning').style.display = 'none';
