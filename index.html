@@ -161,78 +161,59 @@
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
+// Инициализация Telegram Web App
 let tg = window.Telegram?.WebApp;
 let userData = null;
 
-// Функция проверки Telegram Web App
-function isTelegramWebApp() {
-    return !!(tg && (tg.initData || tg.initDataUnsafe));
+// Показ текущего URL (для предупреждения)
+function showCurrentUrl() {
+    const currentUrl = window.location.href;
+    document.getElementById('current-url').textContent = currentUrl;
 }
 
-// Получение данных пользователя
-function getUserData() {
-    if (tg?.initDataUnsafe?.user) return tg.initDataUnsafe.user;
-
-    const urlParams = new URLSearchParams(window.location.hash.substring(1));
-    const initData = urlParams.get('tgWebAppData');
-    if (initData) {
-        try {
-            const data = JSON.parse(decodeURIComponent(initData));
-            return data.user || null;
-        } catch(e) {
-            console.error('Ошибка парсинга tgWebAppData', e);
-        }
-    }
-    return null;
-}
-
-// Инициализация приложения
-function initApp() {
-    showCurrentUrl();
-    
-    userData = getUserData();
-
-    if (userData) {
-        initTelegramWebApp();
-    } else {
-        showNonTelegramWarning();
+// Статус сообщений
+function showStatus(message, type) {
+    const status = document.getElementById('status');
+    status.textContent = message;
+    status.className = `status ${type}`;
+    if (type !== 'loading' && type !== 'info') {
+        setTimeout(() => {
+            status.textContent = '';
+            status.className = 'status';
+        }, 3000);
     }
 }
 
-// Инициализация Telegram Web App
-function initTelegramWebApp() {
-    document.getElementById('login-warning').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    displayUserInfo();
-    setupTelegramFeatures();
-    addPlatformInfo();
+// Предупреждение для обычного браузера
+function showNonTelegramWarning() {
+    document.getElementById('login-warning').style.display = 'block';
+    document.getElementById('app').style.display = 'none';
 }
 
 // Отображение информации о пользователе
 function displayUserInfo() {
     const userInfoDiv = document.getElementById('user-info');
-    
+
     let userHtml = `
         <div class="user-card">
             <h3>👤 Ваш профиль</h3>
             <p><strong>ID:</strong> <code>${userData.id}</code></p>
             <p><strong>Имя:</strong> ${userData.first_name} ${userData.last_name || ''}</p>
     `;
-    
+
     if (userData.username) userHtml += `<p><strong>Username:</strong> @${userData.username}</p>`;
     if (userData.language_code) userHtml += `<p><strong>Язык:</strong> ${userData.language_code}</p>`;
-    
     userHtml += `</div>`;
+
     userInfoDiv.innerHTML = userHtml;
 }
 
-// Добавление информации о платформе
+// Информация о платформе Telegram
 function addPlatformInfo() {
-    const urlParams = new URLSearchParams(window.location.hash.substring(1));
-    const platform = urlParams.get('tgWebAppPlatform') || tg.platform || 'unknown';
-    const version = urlParams.get('tgWebAppVersion') || tg.version || 'unknown';
-    
+    const platform = tg.platform || 'unknown';
+    const version = tg.version || 'unknown';
     const userInfoDiv = document.getElementById('user-info');
+
     userInfoDiv.innerHTML += `
         <div class="platform-info">
             <p><strong>📱 Платформа:</strong> ${platform}</p>
@@ -251,7 +232,7 @@ function setupTelegramFeatures() {
     tg.expand();
 }
 
-// Отправка сообщения
+// Отправка сообщения в бот
 function sendMessage() {
     const messageText = document.getElementById('messageText').value.trim();
     if (!messageText) return showStatus('Введите текст сообщения', 'error');
@@ -259,18 +240,14 @@ function sendMessage() {
     showStatus('Отправка...', 'loading');
 
     try {
-        if (tg) {
-            tg.sendData(JSON.stringify({
-                action: 'send_message',
-                text: messageText,
-                timestamp: new Date().toISOString(),
-                user_id: userData.id
-            }));
-            showStatus('✅ Сообщение отправлено! Проверьте Telegram', 'success');
-            document.getElementById('messageText').value = '';
-        } else {
-            showStatus('ℹ️ Откройте бота в Telegram для отправки сообщения', 'info');
-        }
+        tg.sendData(JSON.stringify({
+            action: 'send_message',
+            text: messageText,
+            timestamp: new Date().toISOString(),
+            user_id: userData.id
+        }));
+        showStatus('✅ Сообщение отправлено! Проверьте Telegram', 'success');
+        document.getElementById('messageText').value = '';
     } catch (e) {
         showStatus('❌ Ошибка отправки', 'error');
         console.error(e);
@@ -299,33 +276,37 @@ function sendRandom() {
     sendMessage();
 }
 
-// Предупреждение для обычного браузера
-function showNonTelegramWarning() {
-    document.getElementById('login-warning').style.display = 'block';
-    document.getElementById('app').style.display = 'none';
-}
+// Инициализация приложения
+function initApp() {
+    showCurrentUrl();
 
-// Статус
-function showStatus(message, type) {
-    const status = document.getElementById('status');
-    status.textContent = message;
-    status.className = `status ${type}`;
-    if (type !== 'loading' && type !== 'info') {
-        setTimeout(() => {
-            status.textContent = '';
-            status.className = 'status';
-        }, 3000);
+    if (!tg) {
+        showNonTelegramWarning();
+        return;
     }
+
+    tg.ready(); // Инициализация WebApp
+
+    if (!tg.initDataUnsafe?.user) {
+        showNonTelegramWarning();
+        return;
+    }
+
+    userData = tg.initDataUnsafe.user;
+
+    // Показ основной части приложения
+    document.getElementById('login-warning').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+
+    displayUserInfo();
+    addPlatformInfo();
+    setupTelegramFeatures();
 }
 
-// Показ текущего URL
-function showCurrentUrl() {
-    const currentUrl = window.location.href;
-    document.getElementById('current-url').textContent = currentUrl;
-}
-
+// Запуск
 window.addEventListener('DOMContentLoaded', initApp);
 window.addEventListener('hashchange', initApp);
+
 </script>
 </body>
 </html>
