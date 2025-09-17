@@ -19,6 +19,19 @@
             margin: 0 auto;
         }
 
+        #app {
+            display: none;
+        }
+
+        #login-warning {
+            text-align: center;
+            padding: 40px 20px;
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 15px;
+            margin-top: 50px;
+        }
+
         .user-card {
             background: var(--tg-theme-secondary-bg-color, #f8f9fa);
             padding: 20px;
@@ -112,14 +125,6 @@
             font-family: 'Courier New', monospace;
         }
 
-        .demo-user {
-            background: #e9ecef;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
         @media (max-width: 480px) {
             .features {
                 grid-template-columns: 1fr;
@@ -137,11 +142,6 @@
         <h1>🤖 Мое приложение</h1>
         <div id="user-info"></div>
         
-        <div id="demo-warning" class="demo-user">
-            <p>⚠️ Демонстрационный режим</p>
-            <p>Для полного функционала откройте через Telegram бота</p>
-        </div>
-        
         <textarea id="messageText" placeholder="Введите ваше сообщение..."></textarea>
         <button onclick="sendMessage()">📨 Отправить себе сообщение</button>
         
@@ -152,12 +152,22 @@
         
         <div id="status"></div>
     </div>
+
+    <div id="login-warning">
+        <p>⚠️ Откройте это приложение через Telegram бота для полного функционала</p>
+        <p>Текущий URL: <span id="current-url"></span></p>
+    </div>
 </div>
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script>
 let tg = window.Telegram?.WebApp;
 let userData = null;
+
+// Функция проверки Telegram Web App
+function isTelegramWebApp() {
+    return !!(tg && (tg.initData || tg.initDataUnsafe));
+}
 
 // Получение данных пользователя
 function getUserData() {
@@ -176,34 +186,22 @@ function getUserData() {
     return null;
 }
 
-// Создание демо-пользователя
-function createDemoUser() {
-    return {
-        id: Math.floor(Math.random() * 1000000),
-        first_name: "Демо",
-        last_name: "Пользователь",
-        username: "demo_user",
-        language_code: "ru"
-    };
-}
-
 // Инициализация приложения
 function initApp() {
+    showCurrentUrl();
+    
     userData = getUserData();
-    
-    // Если нет данных пользователя из Telegram, создаем демо-пользователя
-    if (!userData) {
-        userData = createDemoUser();
-        document.getElementById('demo-warning').style.display = 'block';
+
+    if (userData) {
+        initTelegramWebApp();
     } else {
-        document.getElementById('demo-warning').style.display = 'none';
+        showNonTelegramWarning();
     }
-    
-    initTelegramWebApp();
 }
 
 // Инициализация Telegram Web App
 function initTelegramWebApp() {
+    document.getElementById('login-warning').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     displayUserInfo();
     setupTelegramFeatures();
@@ -230,8 +228,9 @@ function displayUserInfo() {
 
 // Добавление информации о платформе
 function addPlatformInfo() {
-    const platform = tg?.platform || 'unknown';
-    const version = tg?.version || 'unknown';
+    const urlParams = new URLSearchParams(window.location.hash.substring(1));
+    const platform = urlParams.get('tgWebAppPlatform') || tg.platform || 'unknown';
+    const version = urlParams.get('tgWebAppVersion') || tg.version || 'unknown';
     
     const userInfoDiv = document.getElementById('user-info');
     userInfoDiv.innerHTML += `
@@ -300,6 +299,12 @@ function sendRandom() {
     sendMessage();
 }
 
+// Предупреждение для обычного браузера
+function showNonTelegramWarning() {
+    document.getElementById('login-warning').style.display = 'block';
+    document.getElementById('app').style.display = 'none';
+}
+
 // Статус
 function showStatus(message, type) {
     const status = document.getElementById('status');
@@ -311,6 +316,12 @@ function showStatus(message, type) {
             status.className = 'status';
         }, 3000);
     }
+}
+
+// Показ текущего URL
+function showCurrentUrl() {
+    const currentUrl = window.location.href;
+    document.getElementById('current-url').textContent = currentUrl;
 }
 
 window.addEventListener('DOMContentLoaded', initApp);
