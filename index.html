@@ -166,7 +166,7 @@ function initApp() {
     if (isTelegramWebApp()) {
         initTelegramWebApp();
     } else {
-        showNonTelegramWarning();
+        initTelegramWebApp();
     }
 }
 
@@ -269,8 +269,8 @@ function showCurrentUrl() {
 
 // Предупреждение для не-Telegram окружения
 function showNonTelegramWarning() {
-    document.getElementById('login-warning').style.display = 'block';
-    document.getElementById('app').style.display = 'none';
+    // document.getElementById('login-warning').style.display = 'block';
+    // document.getElementById('app').style.display = 'none';
 }
 
 // Показать статус
