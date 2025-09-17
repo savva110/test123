@@ -93,7 +93,7 @@
             tg.postEvent('web_app_data', JSON.stringify(payload));
             showStatus('✅ Отправлено (postEvent, без закрытия)', 'success');
         } else if(typeof tg?.sendData === 'function'){
-            tg.sendData(JSON.stringify(payload));
+            tg.postEvent(JSON.stringify(payload));
             showStatus('✅ Отправлено (sendData, может закрыть)', 'success', false);
         } else {
             showStatus('Метод недоступен', 'error');
