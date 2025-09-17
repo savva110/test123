@@ -134,20 +134,11 @@
             
             showStatus('Отправка...');
             
-            // Отправляем сообщение через Telegram Web App
+            // Отправляем данные через Web App
             tg.sendData(message);
             
-            // Показываем подтверждение
-            showStatus('Сообщение отправлено! ✅', 'success');
-            
-            // Очищаем поле ввода
-            messageInput.value = '';
-            
-            // Через 2 секунды скрываем статус
-            setTimeout(() => {
-                status.textContent = '';
-                status.className = 'status';
-            }, 2000);
+            // Закрываем мини-приложение после отправки
+            tg.close();
         }
         
         // Функция для отображения статуса
