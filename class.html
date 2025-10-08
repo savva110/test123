@@ -14,6 +14,10 @@
         .buttons button { background: var(--tg-theme-button-color,#2481cc); color: var(--tg-theme-button-text-color,#fff); border:none; padding:12px 14px; border-radius:10px; }
         .ghost { background: transparent; color: var(--tg-theme-button-color,#2481cc); border:1px solid var(--tg-theme-button-color,#2481cc); }
         .disabled { opacity:.6; pointer-events:none; }
+        .status { margin-top: 12px; padding: 10px; border-radius: 8px; text-align: center; font-weight: 500; }
+        .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.loading { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
@@ -21,8 +25,9 @@
     <h1>🏷️ Класс</h1>
     <div class="section">
         <h3>📝 Название класса</h3>
-        <div class="row"><input id="class-name" type="text" placeholder="Например: 7А"></div>
+        <div class="row"><input id="class-name" type="text" placeholder="Например: 7А" maxlength="50"></div>
         <div class="buttons"><button id="save-name">Сохранить</button></div>
+        <div id="status"></div>
     </div>
     <div class="section">
         <h3>⚠️ Расформировать класс</h3>
@@ -30,14 +35,62 @@
         <div class="buttons"><button class="ghost disabled">Расформировать</button></div>
     </div>
     <script>
-        const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+        const tg = window.Telegram.WebApp; 
+        tg.ready(); 
+        tg.expand();
+        
         const params = new URLSearchParams(location.search);
         const prefilled = params.get('className');
         if (prefilled) document.getElementById('class-name').value = prefilled;
+        
+        // Функция для показа статуса
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            
+            // Автоматически скрываем статус через 3 секунды
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    status.textContent = '';
+                    status.className = 'status';
+                }, 3000);
+            }
+        }
+        
+        // Обработчик сохранения названия
         document.getElementById('save-name').onclick = () => {
             const name = document.getElementById('class-name').value.trim();
+            
+            // Валидация
+            if (!name) {
+                showStatus('❌ Введите название класса', 'error');
+                return;
+            }
+            
+            if (name.length < 2) {
+                showStatus('❌ Название должно содержать минимум 2 символа', 'error');
+                return;
+            }
+            
+            if (name.length > 50) {
+                showStatus('❌ Название не должно превышать 50 символов', 'error');
+                return;
+            }
+            
+            // Показываем статус загрузки
+            showStatus('⏳ Сохранение...', 'loading');
+            
+            // Отправляем данные
             tg.sendData(JSON.stringify({ action:'set_class_name', name }));
         };
+        
+        // Обработка Enter в поле ввода
+        document.getElementById('class-name').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('save-name').click();
+            }
+        });
     </script>
 </body>
 </html>
