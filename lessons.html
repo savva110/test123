@@ -33,7 +33,7 @@
     <div class="section" id="remove-section">
         <h3>❌ Удалить урок</h3>
         <div id="current-lessons"></div>
-        <div class="buttons"><button id="remove-submit" class="ghost">Сохранить</button></div>
+        <p class="hint">Удаление осуществляется кнопкой «Удалить» у каждого урока. Отдельной кнопки сохранения нет — нажмите «Сохранить» в блоке «Добавить урок», чтобы отправить финальный список.</p>
     </div>
     <div class="section" id="schedule-section">
         <h3>📅 Расписание</h3>
@@ -86,9 +86,7 @@
             const toAdd = collectAdd();
             tg.sendData(JSON.stringify({ action:'add_lessons', lessons: toAdd }));
         };
-        document.getElementById('remove-submit').onclick=()=>{
-            tg.sendData(JSON.stringify({ action:'remove_lessons', lessons }));
-        };
+        // удаление происходит на месте (кнопкой у элемента). Отправляем только общий список через add-submit
 
         renderAdd();
         renderRemove();

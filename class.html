@@ -31,6 +31,9 @@
     </div>
     <script>
         const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+        const params = new URLSearchParams(location.search);
+        const prefilled = params.get('className');
+        if (prefilled) document.getElementById('class-name').value = prefilled;
         document.getElementById('save-name').onclick = () => {
             const name = document.getElementById('class-name').value.trim();
             tg.sendData(JSON.stringify({ action:'set_class_name', name }));

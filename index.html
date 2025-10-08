@@ -185,9 +185,17 @@ function noop() {}
 // Настройка функций Telegram
 function setupTelegramFeatures() {
     tg.expand();
-    document.getElementById('open-lessons').addEventListener('click', () => { window.location.href = 'lessons.html' });
-    document.getElementById('open-class').addEventListener('click', () => { window.location.href = 'class.html' });
-    document.getElementById('open-students').addEventListener('click', () => { window.location.href = 'students.html' });
+    function forwardParams(to){
+        const src = new URL(window.location.href);
+        const params = new URLSearchParams();
+        if (src.searchParams.get('lessons')) params.set('lessons', src.searchParams.get('lessons'));
+        if (src.searchParams.get('className')) params.set('className', src.searchParams.get('className'));
+        const q = params.toString();
+        window.location.href = to + (q ? ('?' + q) : '');
+    }
+    document.getElementById('open-lessons').addEventListener('click', () => { forwardParams('lessons.html') });
+    document.getElementById('open-class').addEventListener('click', () => { forwardParams('class.html') });
+    document.getElementById('open-students').addEventListener('click', () => { forwardParams('students.html') });
 }
 
 function sendTime() { return; }
