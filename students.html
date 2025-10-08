@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ученики — Настройки</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin:0; padding:16px; background: var(--tg-theme-bg-color,#fff); color: var(--tg-theme-text-color,#000); }
+        h1 { margin: 0 0 12px; font-size: 20px; }
+        .section { background: var(--tg-theme-secondary-bg-color,#f5f5f5); border-radius: 12px; padding: 14px; border-left: 4px solid var(--tg-theme-button-color,#2481cc); margin-bottom: 12px; }
+        textarea { width:100%; min-height:120px; padding:10px; border:2px solid var(--tg-theme-hint-color,#ccc); border-radius:10px; font-size:14px; }
+        .buttons { display:flex; gap:8px; margin-top: 12px; }
+        .buttons button { background: var(--tg-theme-button-color,#2481cc); color: var(--tg-theme-button-text-color,#fff); border:none; padding:12px 14px; border-radius:10px; }
+        .ghost { background: transparent; color: var(--tg-theme-button-color,#2481cc); border:1px solid var(--tg-theme-button-color,#2481cc); }
+        .disabled { opacity:.6; pointer-events:none; }
+    </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <h1>👥 Ученики</h1>
+    <div class="section">
+        <h3>Добавить учеников</h3>
+        <p>Шаблон. Введите имена по одному на строку.</p>
+        <textarea id="students-add" placeholder="Иванов Иван\nПетров Пётр"></textarea>
+        <div class="buttons"><button id="save-add">Сохранить</button></div>
+    </div>
+    <div class="section">
+        <h3>Удалить учеников</h3>
+        <p>Шаблон. Введите имена по одному на строку.</p>
+        <textarea id="students-remove" placeholder="Иванов Иван"></textarea>
+        <div class="buttons"><button class="ghost disabled">Сохранить</button></div>
+    </div>
+    <script>
+        const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+        document.getElementById('save-add').onclick = () => {
+            const lines = document.getElementById('students-add').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+            tg.sendData(JSON.stringify({ action:'add_students_template', students: lines }));
+        };
+    </script>
+</body>
+</html>
+
+

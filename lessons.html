@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Уроки — Настройки класса</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin:0; padding:16px; background: var(--tg-theme-bg-color,#fff); color: var(--tg-theme-text-color,#000); }
+        h1 { margin: 0 0 12px; font-size: 20px; }
+        .section { background: var(--tg-theme-secondary-bg-color,#f5f5f5); border-radius: 12px; padding: 14px; border-left: 4px solid var(--tg-theme-button-color,#2481cc); margin-bottom: 12px; }
+        .row { display:flex; gap:8px; align-items:center; }
+        .row input[type="text"] { flex: 1; padding: 10px; border: 2px solid var(--tg-theme-hint-color,#ccc); border-radius: 10px; font-size: 14px; }
+        .row input[type="color"] { width: 48px; height: 40px; border: none; background: transparent; }
+        .row label { display:flex; align-items:center; gap:6px; font-size: 14px; }
+        .buttons { display:flex; gap:8px; margin-top: 12px; }
+        .buttons a, .buttons button { display:block; text-decoration:none; text-align:center; background: var(--tg-theme-button-color,#2481cc); color: var(--tg-theme-button-text-color,#fff); padding: 12px 14px; border-radius: 10px; border:none; }
+        .ghost { background: transparent; color: var(--tg-theme-button-color,#2481cc); border: 1px solid var(--tg-theme-button-color,#2481cc); }
+        .item { background: #ffffff10; border-radius: 10px; padding: 10px; display:flex; align-items:center; gap:10px; margin-top:8px; }
+        .color { width: 14px; height: 14px; border-radius:50%; border:1px solid #0001; }
+    </style>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <h1>📚 Уроки</h1>
+    <div class="section" id="add-section">
+        <h3>➕ Добавить урок</h3>
+        <div id="add-list"></div>
+        <div class="buttons">
+            <button id="add-row">Добавить поле</button>
+            <button id="add-submit">Сохранить</button>
+        </div>
+    </div>
+    <div class="section" id="remove-section">
+        <h3>❌ Удалить урок</h3>
+        <div id="current-lessons"></div>
+        <div class="buttons"><button id="remove-submit" class="ghost">Сохранить</button></div>
+    </div>
+    <div class="section" id="schedule-section">
+        <h3>📅 Расписание</h3>
+        <p>Шаблон раздела расписания. Реализация позже.</p>
+    </div>
+    <script>
+        const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
+        const urlParams = new URLSearchParams(location.search);
+        function getLessons() { try { return JSON.parse(urlParams.get('lessons')||'[]'); } catch { return []; } }
+        let lessons = getLessons();
+
+        const addList = document.getElementById('add-list');
+        const currentLessons = document.getElementById('current-lessons');
+
+        function createAddRow(name='', color='#2481cc', hasSub=false){
+            const wrap = document.createElement('div'); wrap.className='item';
+            wrap.innerHTML = `
+                <input type="text" placeholder="Название урока" value="${String(name).replaceAll('"','&quot;')}">
+                <input type="color" value="${/^#([0-9a-fA-F]{6})$/.test(String(color))?color:'#2481cc'}">
+                <label><input type="checkbox" ${hasSub?'checked':''}> Подгруппы</label>
+                <button class="ghost rm">Удалить</button>
+            `;
+            wrap.querySelector('.rm').onclick = () => wrap.remove();
+            return wrap;
+        }
+        function renderAdd(){
+            addList.innerHTML='';
+            if (lessons.length){ lessons.forEach(([n,c,s])=> addList.appendChild(createAddRow(n,c,!!s))); }
+            else { addList.appendChild(createAddRow()); }
+        }
+        function collectAdd(){
+            const rows = addList.querySelectorAll('.item'); const res=[];
+            rows.forEach(r=>{ const n=r.querySelector('input[type="text"]').value.trim(); const c=r.querySelector('input[type="color"]').value; const s=r.querySelector('input[type="checkbox"]').checked; if(n) res.push([n,c,s]); });
+            return res;
+        }
+
+        function renderRemove(){
+            currentLessons.innerHTML='';
+            if (!lessons.length){ const p=document.createElement('p'); p.textContent='Список уроков пуст'; p.className='empty'; currentLessons.appendChild(p); return; }
+            lessons.forEach((it, idx)=>{
+                const [n,c,s]=it; const row=document.createElement('div'); row.className='item';
+                row.innerHTML = `<span class="color" style="background:${/^#([0-9a-fA-F]{6})$/.test(String(c))?c:'#2481cc'}"></span><div style="flex:1">${String(n||'Без названия')}</div><button class="ghost">Удалить</button>`;
+                row.querySelector('button').onclick=()=>{ lessons.splice(idx,1); renderRemove(); };
+                currentLessons.appendChild(row);
+            });
+        }
+
+        document.getElementById('add-row').onclick=()=> addList.appendChild(createAddRow());
+        document.getElementById('add-submit').onclick=()=>{
+            const toAdd = collectAdd();
+            tg.sendData(JSON.stringify({ action:'add_lessons', lessons: toAdd }));
+        };
+        document.getElementById('remove-submit').onclick=()=>{
+            tg.sendData(JSON.stringify({ action:'remove_lessons', lessons }));
+        };
+
+        renderAdd();
+        renderRemove();
+    </script>
+</body>
+</html>
+
+
