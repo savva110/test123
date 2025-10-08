@@ -22,7 +22,10 @@
         .buttons a, .buttons button, #save-all { display:block; text-decoration:none; text-align:center; background: var(--tg-theme-button-color,#2481cc); color: var(--tg-theme-button-text-color,#fff); padding: 10px 12px; border-radius: 10px; border:none; font-size:14px; }
         .ghost { background: transparent; color: var(--tg-theme-button-color,#93c5fd); border: 1px solid var(--tg-theme-button-color,#2481cc); }
         .item { background: #ffffff10; border-radius: 10px; padding: 10px; margin-top:8px; }
-        .color { width: 12px; height: 12px; border-radius:50%; border:1px solid #0001; }
+        .rm { background:#ef4444; color:#fff; border:none; border-radius:10px; padding:10px 12px; }
+        .rm:active { opacity:.9; }
+        .toggle { background:#ffffff08; border:1px solid var(--tg-theme-hint-color,#374151); border-radius:10px; padding:6px 10px; }
+        .toggle input[type="checkbox"]{ width:16px; height:16px; }
         .hint { font-size: 12px; opacity:.7; margin:6px 0 0; }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -63,11 +66,10 @@
                 </div>
                 <div class="row row-bottom">
                     <div style="display:flex; align-items:center; gap:8px;">
-                        <span class="color" style="background:${/^#([0-9a-fA-F]{6})$/.test(String(color))?color:'#2481cc'}"></span>
                         <input type="color" value="${/^#([0-9a-fA-F]{6})$/.test(String(color))?color:'#2481cc'}">
-                        <label><input type="checkbox" ${hasSub ? 'checked' : ''}> Подгруппы</label>
+                        <label class="toggle"><input type="checkbox" ${hasSub ? 'checked' : ''}> Подгруппы</label>
                     </div>
-                    <button class="ghost rm">Удалить</button>
+                    <button class="rm">Удалить</button>
                 </div>
             `;
             wrap.querySelector('.rm').onclick = () => wrap.remove();
