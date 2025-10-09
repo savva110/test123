@@ -142,7 +142,8 @@
                 const c = inputs[2] ? inputs[2].value.trim() : '';
                 const cb = r.querySelector('input[type="checkbox"]');
                 const leader = cb ? cb.checked : false;
-                const id = r.dataset.userId ? Number(r.dataset.userId) : null;
+                const hasId = r.hasAttribute('data-user-id');
+                const id = hasId ? Number(r.dataset.userId) : null;
                 // Для новых требуется код, для существующих (id) код не обязателен
                 if (id !== null) {
                     if (f && l) res.push({ id, first_name: f, last_name: l, leader });
