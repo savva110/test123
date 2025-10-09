@@ -14,6 +14,7 @@
         .buttons button { background: var(--tg-theme-button-color,#2481cc); color: var(--tg-theme-button-text-color,#fff); border:none; padding:12px 14px; border-radius:10px; }
         .ghost { background: transparent; color: var(--tg-theme-button-color,#2481cc); border:1px solid var(--tg-theme-button-color,#2481cc); }
         .disabled { opacity:.6; pointer-events:none; }
+        .danger { background: #d9534f; color: #fff; }
         .status { margin-top: 12px; padding: 10px; border-radius: 8px; text-align: center; font-weight: 500; }
         .status.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .status.error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
@@ -31,8 +32,14 @@
     </div>
     <div class="section">
         <h3>⚠️ Расформировать класс</h3>
-        <p>Шаблон. Реализация позже.</p>
-        <div class="buttons"><button class="ghost disabled">Расформировать</button></div>
+        <p>Действие удалит класс и связанные данные. Это необратимо.</p>
+        <div class="buttons">
+            <button id="disband-toggle" class="ghost">Расформировать класс</button>
+        </div>
+        <div id="confirm-disband" class="buttons" style="display:none;">
+            <button id="confirm-disband-yes" class="danger">Удалить</button>
+            <button id="confirm-disband-no" class="ghost">Отказаться</button>
+        </div>
     </div>
     <script>
         const tg = window.Telegram.WebApp; 
@@ -91,6 +98,29 @@
                 document.getElementById('save-name').click();
             }
         });
+
+        // Логика расформирования класса (подтверждение на сайте)
+        const disbandToggle = document.getElementById('disband-toggle');
+        const confirmDisband = document.getElementById('confirm-disband');
+        const confirmYes = document.getElementById('confirm-disband-yes');
+        const confirmNo = document.getElementById('confirm-disband-no');
+
+        if (disbandToggle && confirmDisband && confirmYes && confirmNo) {
+            disbandToggle.onclick = () => {
+                confirmDisband.style.display = 'flex';
+                disbandToggle.classList.add('disabled');
+            };
+
+            confirmNo.onclick = () => {
+                confirmDisband.style.display = 'none';
+                disbandToggle.classList.remove('disabled');
+            };
+
+            confirmYes.onclick = () => {
+                showStatus('⏳ Удаление класса...', 'loading');
+                tg.sendData(JSON.stringify({ action: 'disband_class' }));
+            };
+        }
     </script>
 </body>
 </html>
