@@ -105,7 +105,18 @@
                     const l = String((s && s.last_name) || '');
                     const leader = Boolean((s && s.leader) || false);
                     const id = (s && (s.id ?? s.user_id)) ?? null;
-                    list.appendChild(createStudentRow(f, l, '', leader, id));
+                    const role = Number((s && s.role) ?? 0);
+                    const row = createStudentRow(f, l, '', leader, id);
+                    if (role === 2) {
+                        // Учитель: убираем чекбокс старосты и добавляем подпись
+                        const toggle = row.querySelector('.toggle');
+                        if (toggle) toggle.remove();
+                        const label = document.createElement('div');
+                        label.className = 'hint';
+                        label.textContent = 'Учитель';
+                        row.querySelector('.row-bottom').insertBefore(label, row.querySelector('.rm'));
+                    }
+                    list.appendChild(row);
                 });
             } else {
                 list.appendChild(createStudentRow());
