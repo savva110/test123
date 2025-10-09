@@ -14,9 +14,9 @@
         .footer { position:fixed; bottom:0; left:0; right:0; background:var(--tg-theme-bg-color,#0f1720); padding:10px; box-shadow:0 -4px 10px rgba(0,0,0,0.3); z-index:10; }
         .section { background:var(--tg-theme-secondary-bg-color,#111827); border-radius:12px; padding:10px; border-left:4px solid var(--tg-theme-button-color,#2481cc); margin-bottom:10px; }
         .row { display:flex; gap:8px; align-items:center; }
-        .row-top { margin-bottom:6px; }
-        .row-bottom { justify-content:space-between; }
-        .row input[type="text"] { flex:1; padding:8px; border:2px solid var(--tg-theme-hint-color,#374151); background:transparent; color:inherit; border-radius:8px; font-size:14px; }
+        .row-top { margin-bottom:6px; display:grid; grid-template-columns: 1fr; gap:8px; }
+        .row-bottom { justify-content:space-between; flex-wrap:wrap; gap:10px; }
+        .row input[type="text"] { flex:1; padding:8px; border:2px solid var(--tg-theme-hint-color,#374151); background:transparent; color:inherit; border-radius:8px; font-size:14px; min-width:0; }
         .row label { display:flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap; }
         .buttons { display:flex; gap:8px; margin-top:8px; }
         .buttons a, .buttons button, #save-all { display:block; width:100%; text-decoration:none; text-align:center; background:var(--tg-theme-button-color,#2481cc); color:var(--tg-theme-button-text-color,#fff); padding:12px; border-radius:12px; border:none; font-size:14px; }
@@ -31,7 +31,7 @@
         @media (min-width:420px) {
             .section { padding:12px; }
             .item { padding:12px; }
-            .row-top { margin-bottom:8px; }
+            .row-top { margin-bottom:8px; grid-template-columns: 1fr 1fr; }
             .row-bottom { gap:12px; }
             .row input[type="text"] { font-size:15px; }
             #save-all { width:100%; }
@@ -39,9 +39,14 @@
 
         @media (min-width:600px) {
             .item { display:flex; align-items:center; gap:12px; }
-            .row-top { flex:1 1 auto; margin:0; }
+            .row-top { flex:1 1 auto; margin:0; grid-template-columns: 1fr 1fr 1fr; }
             .row-bottom { flex:0 0 auto; margin:0; justify-content:flex-end; gap:12px; }
             .row-bottom > div { display:flex; align-items:center; gap:10px; }
+        }
+
+        /* На средних экранах делаем поле кода на всю ширину */
+        @media (min-width:420px) and (max-width:599.98px) {
+            .row-top .code { grid-column: 1 / -1; }
         }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -73,9 +78,9 @@
             wrap.className = 'item';
             wrap.innerHTML = `
                 <div class="row row-top">
-                    <input type="text" placeholder="Имя" value="${String(firstName).replaceAll('"','&quot;')}">
-                    <input type="text" placeholder="Фамилия" value="${String(lastName).replaceAll('"','&quot;')}">
-                    <input type="text" placeholder="Уникальный код" value="${String(code).replaceAll('"','&quot;')}">
+                    <input class="first" type="text" placeholder="Имя" value="${String(firstName).replaceAll('"','&quot;')}">
+                    <input class="last" type="text" placeholder="Фамилия" value="${String(lastName).replaceAll('"','&quot;')}">
+                    <input class="code" type="text" placeholder="Уникальный код" value="${String(code).replaceAll('"','&quot;')}">
                 </div>
                 <div class="row row-bottom">
                     <label class="toggle"><input type="checkbox" ${isLeader ? 'checked' : ''}> Староста</label>
