@@ -72,8 +72,13 @@
         const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
 
         const list = document.getElementById('students-list');
+        const urlParams = new URLSearchParams(location.search);
+        function getPrefilledStudents(){
+            try { return JSON.parse(urlParams.get('students')||'[]'); } catch { return []; }
+        }
+        const prefilledStudents = getPrefilledStudents();
 
-        function createStudentRow(firstName = '', lastName = '', code = '', isLeader = false){
+        function createStudentRow(firstName = '', lastName = '', code = '', isLeader = false, id = null){
             const wrap = document.createElement('div');
             wrap.className = 'item';
             wrap.innerHTML = `
@@ -87,13 +92,24 @@
                     <button class="rm">Удалить</button>
                 </div>
             `;
+            if (id !== null && id !== undefined) { wrap.dataset.userId = String(id); }
             wrap.querySelector('.rm').onclick = () => wrap.remove();
             return wrap;
         }
 
         function render(){
             list.innerHTML = '';
-            list.appendChild(createStudentRow());
+            if (Array.isArray(prefilledStudents) && prefilledStudents.length) {
+                prefilledStudents.forEach(s => {
+                    const f = String((s && s.first_name) || '');
+                    const l = String((s && s.last_name) || '');
+                    const leader = Boolean((s && s.leader) || false);
+                    const id = (s && (s.id ?? s.user_id)) ?? null;
+                    list.appendChild(createStudentRow(f, l, '', leader, id));
+                });
+            } else {
+                list.appendChild(createStudentRow());
+            }
         }
 
         function collectStudents(){
@@ -105,7 +121,13 @@
                 const l = inputs[1].value.trim();
                 const c = inputs[2].value.trim();
                 const leader = r.querySelector('input[type="checkbox"]').checked;
-                if (f && l && c) res.push({ first_name: f, last_name: l, code: c, leader });
+                const id = r.dataset.userId ? Number(r.dataset.userId) : null;
+                // Для новых требуется код, для существующих (id) код не обязателен
+                if (id !== null) {
+                    if (f && l) res.push({ id, first_name: f, last_name: l, leader });
+                } else {
+                    if (f && l && c) res.push({ first_name: f, last_name: l, code: c, leader });
+                }
             });
             return res;
         }
