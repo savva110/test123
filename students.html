@@ -24,6 +24,7 @@
         .item { background:#ffffff10; border-radius:10px; padding:10px; margin-top:8px; }
         .rm { background:#ef4444; color:#fff; border:none; border-radius:10px; padding:10px 12px; }
         .rm:active { opacity:.9; }
+        .rm.disabled { opacity:.6; pointer-events:none; cursor:default; }
         .toggle { background:#ffffff08; border:1px solid var(--tg-theme-hint-color,#374151); border-radius:10px; padding:6px 10px; }
         .toggle input[type="checkbox"] { width:16px; height:16px; }
         .hint { font-size:12px; opacity:.7; margin:6px 0 0; }
@@ -93,6 +94,11 @@
                 </div>
             `;
             if (id !== null && id !== undefined) { wrap.dataset.userId = String(id); }
+            // Если это существующий участник — скрываем поле кода
+            if (id !== null && id !== undefined) {
+                const codeInput = wrap.querySelector('.code');
+                if (codeInput) codeInput.style.display = 'none';
+            }
             wrap.querySelector('.rm').onclick = () => wrap.remove();
             return wrap;
         }
@@ -114,7 +120,10 @@
                         const label = document.createElement('div');
                         label.className = 'hint';
                         label.textContent = 'Учитель';
-                        row.querySelector('.row-bottom').insertBefore(label, row.querySelector('.rm'));
+                        const rmBtn = row.querySelector('.rm');
+                        row.querySelector('.row-bottom').insertBefore(label, rmBtn);
+                        // Нельзя удалить учителя
+                        if (rmBtn) { rmBtn.classList.add('disabled'); rmBtn.setAttribute('disabled', 'disabled'); rmBtn.onclick = null; }
                     }
                     list.appendChild(row);
                 });
@@ -147,6 +156,17 @@
         document.getElementById('save-all').onclick = () => {
             const students = collectStudents();
             tg.sendData(JSON.stringify({ action: 'add_students', students }));
+            // После сохранения скрываем поля кода у добавленных строк
+            const rows = list.querySelectorAll('.item');
+            rows.forEach(r => {
+                if (!r.dataset.userId) {
+                    const codeInput = r.querySelector('.code');
+                    if (codeInput && codeInput.value.trim()) {
+                        codeInput.value = '';
+                        codeInput.style.display = 'none';
+                    }
+                }
+            });
         };
 
         render();
