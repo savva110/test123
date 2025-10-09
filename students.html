@@ -66,7 +66,7 @@
             </div>
         </div>
         <div class="footer">
-            <button id="save-all" type="button">✅ Сохранить</button>
+            <button id="save-all">✅ Сохранить</button>
         </div>
     </div>
     <script>
@@ -155,17 +155,7 @@
         document.getElementById('add-student').onclick = () => list.appendChild(createStudentRow());
         document.getElementById('save-all').onclick = () => {
             const students = collectStudents();
-            if (!Array.isArray(students)) return;
-            if (!window.Telegram || !window.Telegram.WebApp || typeof window.Telegram.WebApp.sendData !== 'function') {
-                alert('Откройте через Telegram бота, чтобы сохранить изменения');
-                return;
-            }
-            try {
-                window.Telegram.WebApp.sendData(JSON.stringify({ action: 'add_students', students }));
-            } catch (e) {
-                console.error(e);
-                try { window.Telegram.WebApp.showAlert('Не удалось отправить данные'); } catch {}
-            }
+            tg.sendData(JSON.stringify({ action: 'add_students', students: students }));
             // После сохранения скрываем поля кода у добавленных строк
             const rows = list.querySelectorAll('.item');
             rows.forEach(r => {
