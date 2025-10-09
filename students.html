@@ -139,8 +139,9 @@
                 const inputs = r.querySelectorAll('input[type="text"]');
                 const f = inputs[0].value.trim();
                 const l = inputs[1].value.trim();
-                const c = inputs[2].value.trim();
-                const leader = r.querySelector('input[type="checkbox"]').checked;
+                const c = inputs[2] ? inputs[2].value.trim() : '';
+                const cb = r.querySelector('input[type="checkbox"]');
+                const leader = cb ? cb.checked : false;
                 const id = r.dataset.userId ? Number(r.dataset.userId) : null;
                 // Для новых требуется код, для существующих (id) код не обязателен
                 if (id !== null) {
