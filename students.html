@@ -46,7 +46,16 @@
         .row-bottom select.subgroup { min-width: 140px; }
         select.subgroup:focus { outline: 2px solid var(--tg-theme-button-color,#2481cc); outline-offset: 2px; }
         /* Try to slightly lower option text in some browsers */
-        select.subgroup option { padding-top: 6px; padding-bottom: 4px; }
+        select.subgroup option { 
+            padding-top: 6px; 
+            padding-bottom: 4px; 
+            background: var(--tg-theme-secondary-bg-color,#111827); 
+            color: var(--tg-theme-text-color,#e5e7eb);
+        }
+        select.subgroup optgroup { 
+            background: var(--tg-theme-secondary-bg-color,#111827); 
+            color: var(--tg-theme-text-color,#e5e7eb);
+        }
         .hint { font-size:12px; opacity:.7; margin:6px 0 0; }
         /* Pointer cursor on interactive elements */
         .buttons button, #save-all, .rm:not(.disabled), .toggle, input[type="checkbox"] { cursor: pointer; }
