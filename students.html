@@ -30,7 +30,38 @@
         .toggle input[type="checkbox"] { width:16px; height:16px; }
         .hint { font-size:12px; opacity:.7; margin:6px 0 0; }
         /* Pointer cursor on interactive elements */
-        .buttons button, #save-all, .rm:not(.disabled), .toggle, input[type="checkbox"] { cursor: pointer; }
+        .buttons button, #save-all, .rm:not(.disabled), .toggle, input[type="checkbox"], select.subgroup, .select-wrap { cursor: pointer; }
+        /* Styled select for subgroup to match site visuals */
+        .select-wrap { position: relative; display: inline-block; }
+        select.subgroup { 
+            background: #ffffff08; 
+            border: 1px solid var(--tg-theme-hint-color,#374151); 
+            color: inherit; 
+            border-radius: 10px; 
+            line-height: 1.2;
+            outline: none;
+            appearance: none; 
+            min-width: 130px;
+        }
+        .select-wrap::after {
+            content: "";
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            margin-top: -3px;
+            border-top: 6px solid var(--tg-theme-button-color,#93c5fd);
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            pointer-events: none;
+            opacity: .9;
+        }
+        select.subgroup:focus { 
+            border-color: var(--tg-theme-button-color,#2481cc); 
+            box-shadow: 0 0 0 2px #2481cc33; 
+        }
+        @media (min-width:420px) {
+            select.subgroup { font-size: 14px; padding: 9px 40px 9px 14px; }
+        }
 
         @media (min-width:420px) {
             .section { padding:12px; }
@@ -62,7 +93,7 @@
                 <h1>👥 Ученики</h1>
                 <div class="section" id="students-section">
                     <h3>➕ Добавление учеников</h3>
-                    <p class="hint">Поля: имя, фамилия, уникальный код, флажок староста.</p>
+                    <p class="hint">Поля: имя, фамилия, уникальный код, флажок староста, подгруппа.</p>
                     <div id="students-list"></div>
                     <div class="buttons"><button id="add-student" class="ghost">Добавить ученика</button></div>
                 </div>
@@ -78,6 +109,13 @@
         const list = document.getElementById('students-list');
         const saveBtn = document.getElementById('save-all');
         const urlParams = new URLSearchParams(location.search);
+        function getSubgroupsCount(){
+            const raw = urlParams.get('subgroups');
+            const n = Number(raw);
+            if (!Number.isFinite(n) || n < 1) return 1;
+            return Math.min(Math.max(1, Math.floor(n)), 10);
+        }
+        const SUBGROUPS_COUNT = getSubgroupsCount();
         function getPrefilledStudents(){
             try { return JSON.parse(urlParams.get('students')||'[]'); } catch { return []; }
         }
@@ -87,6 +125,13 @@
             if (!btn) return;
             if (disabled){ btn.classList.add('disabled'); btn.setAttribute('disabled','disabled'); }
             else { btn.classList.remove('disabled'); btn.removeAttribute('disabled'); }
+        }
+        function getSelectedSubgroup(row){
+            const sel = row.querySelector('select.subgroup');
+            if (!sel) return 1;
+            const v = Number(sel.value);
+            if (!Number.isFinite(v) || v < 1) return 1;
+            return Math.min(v, SUBGROUPS_COUNT);
         }
         function normalizeStudentRowData(row){
             const inputs = row.querySelectorAll('input[type="text"]');
@@ -98,7 +143,8 @@
             const leader = cb ? Boolean(cb.checked) : false;
             const hasId = row.hasAttribute('data-user-id');
             const id = hasId ? Number(row.dataset.userId) : null;
-            return { id, first_name: f, last_name: l, code: c, leader };
+            const subgroup = getSelectedSubgroup(row);
+            return { id, first_name: f, last_name: l, code: c, leader, subgroup };
         }
         function areStudentsEqual(a, b){
             if (!Array.isArray(a) || !Array.isArray(b)) return false;
@@ -112,6 +158,7 @@
                     if (String(x.code||'')!==String(y.code||'')) return false;
                 }
                 if (Boolean(x.leader)!==Boolean(y.leader)) return false;
+                if (Number(x.subgroup||1)!==Number(y.subgroup||1)) return false;
             }
             return true;
         }
@@ -127,7 +174,20 @@
             setDisabled(saveBtn, areStudentsEqual(initialSnapshot, current));
         }
 
-        function createStudentRow(firstName = '', lastName = '', code = '', isLeader = false, id = null){
+        function createSubgroupSelect(selected = 1){
+            const sel = document.createElement('select');
+            sel.className = 'subgroup';
+            for (let i=1;i<=SUBGROUPS_COUNT;i++){
+                const opt = document.createElement('option');
+                opt.value = String(i);
+                opt.textContent = `Подгруппа ${i}`;
+                if (i===Number(selected)) opt.selected = true;
+                sel.appendChild(opt);
+            }
+            sel.addEventListener('change', refreshSaveState);
+            return sel;
+        }
+        function createStudentRow(firstName = '', lastName = '', code = '', isLeader = false, id = null, subgroup = 1, role = 0){
             const wrap = document.createElement('div');
             wrap.className = 'item';
             wrap.innerHTML = `
@@ -147,6 +207,15 @@
                 const codeInput = wrap.querySelector('.code');
                 if (codeInput) codeInput.style.display = 'none';
             }
+            // Вставляем селект подгруппы перед кнопкой удаления, если не учитель
+            const rowBottom = wrap.querySelector('.row-bottom');
+            if (rowBottom && Number(role)!==2){
+                const sel = createSubgroupSelect(Math.min(Math.max(1, Number(subgroup)||1), SUBGROUPS_COUNT));
+                const wrapSel = document.createElement('div');
+                wrapSel.className = 'select-wrap';
+                wrapSel.appendChild(sel);
+                rowBottom.insertBefore(wrapSel, rowBottom.querySelector('.rm'));
+            }
             wrap.querySelector('.rm').onclick = () => { wrap.remove(); refreshSaveState(); };
             // подписки на изменения
             const inputs = wrap.querySelectorAll('input[type="text"], input[type="checkbox"]');
@@ -163,7 +232,8 @@
                     const leader = Boolean((s && s.leader) || false);
                     const id = (s && (s.id ?? s.user_id)) ?? null;
                     const role = Number((s && s.role) ?? 0);
-                    const row = createStudentRow(f, l, '', leader, id);
+                    const subgroup = Math.min(Number((s && s.subgroup) ?? 1) || 1, SUBGROUPS_COUNT);
+                    const row = createStudentRow(f, l, '', leader, id, subgroup, role);
                     if (role === 2) {
                         // Учитель: убираем чекбокс старосты и добавляем подпись
                         const toggle = row.querySelector('.toggle');
@@ -179,7 +249,7 @@
                     list.appendChild(row);
                 });
             } else {
-                list.appendChild(createStudentRow());
+                list.appendChild(createStudentRow('', '', '', false, null, 1, 0));
             }
             initialSnapshot = snapshotCurrentStudents();
             refreshSaveState();
@@ -197,11 +267,12 @@
                 const leader = cb ? cb.checked : false;
                 const hasId = r.hasAttribute('data-user-id');
                 const id = hasId ? Number(r.dataset.userId) : null;
+                const subgroup = getSelectedSubgroup(r);
                 // Для новых требуется код, для существующих (id) код не обязателен
                 if (id !== null) {
-                    if (f && l) res.push({ id, first_name: f, last_name: l, leader });
+                    if (f && l) res.push({ id, first_name: f, last_name: l, leader, subgroup });
                 } else {
-                    if (f && l && c) res.push({ first_name: f, last_name: l, code: c, leader });
+                    if (f && l && c) res.push({ first_name: f, last_name: l, code: c, leader, subgroup });
                 }
             });
             return res;
