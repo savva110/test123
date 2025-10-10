@@ -36,13 +36,13 @@
         .lessons-container { margin-bottom: 15px; }
         .lesson-item { 
             display: inline-block; 
-            margin: 5px; 
-            padding: 8px 12px; 
-            border-radius: 8px; 
+            margin: 3px; 
+            padding: 6px 8px; 
+            border-radius: 6px; 
             cursor: pointer; 
             border: 2px solid transparent;
             transition: all 0.2s;
-            font-size: 14px;
+            font-size: 12px;
         }
         .lesson-item:hover { border-color: var(--tg-theme-button-color,#2481cc); }
         .lesson-item.selected { border-color: var(--tg-theme-button-color,#2481cc); background: var(--tg-theme-button-color,#2481cc); }
@@ -52,13 +52,13 @@
         .schedule-table { 
             width: 100%; 
             border-collapse: collapse; 
-            min-width: 400px;
+            min-width: 320px;
         }
         .schedule-table th, .schedule-table td { 
             border: 1px solid var(--tg-theme-hint-color,#374151); 
-            padding: 4px; 
+            padding: 2px; 
             text-align: center; 
-            font-size: 10px;
+            font-size: 9px;
         }
         .schedule-table th { 
             background: var(--tg-theme-secondary-bg-color,#111827); 
@@ -67,56 +67,59 @@
         .schedule-table td { 
             cursor: pointer; 
             transition: background-color 0.2s;
-            min-height: 30px;
-            height: 30px;
+            min-height: 24px;
+            height: 24px;
             vertical-align: middle;
+            padding: 2px;
         }
         .schedule-table td:first-child {
             cursor: default;
             background: var(--tg-theme-secondary-bg-color,#111827);
             font-weight: bold;
-            width: 50px;
-            min-width: 50px;
-            max-width: 50px;
+            width: 35px;
+            min-width: 35px;
+            max-width: 35px;
         }
         .schedule-table td:nth-child(2),
         .schedule-table td:nth-child(3) {
             cursor: pointer;
             background: var(--tg-theme-secondary-bg-color,#111827);
             font-weight: bold;
-            width: 50px;
-            min-width: 50px;
-            max-width: 50px;
+            width: 70px;
+            min-width: 70px;
+            max-width: 70px;
             transition: background-color 0.2s;
+            padding: 1px;
         }
         .schedule-table td:nth-child(2):hover,
         .schedule-table td:nth-child(3):hover {
             background: var(--tg-theme-hint-color,#374151);
         }
         .schedule-table th:first-child {
-            width: 50px;
-            min-width: 50px;
-            max-width: 50px;
+            width: 35px;
+            min-width: 35px;
+            max-width: 35px;
         }
         .schedule-table th:nth-child(2),
         .schedule-table th:nth-child(3) {
-            width: 100px;
-            min-width: 100px;
-            max-width: 100px;
+            width: 70px;
+            min-width: 70px;
+            max-width: 70px;
         }
         
         /* Стили для полей времени */
         .time-input {
-            width: calc(100% - 4px);
-            padding: 6px 4px;
+            width: calc(100% - 2px);
+            padding: 3px 2px;
             border: 1px solid var(--tg-theme-hint-color,#374151);
             background: var(--tg-theme-secondary-bg-color,#111827);
             color: var(--tg-theme-text-color,#e5e7eb);
-            border-radius: 6px;
-            font-size: 12px;
+            border-radius: 4px;
+            font-size: 10px;
             text-align: center;
             box-sizing: border-box;
-            margin: 2px;
+            margin: 1px;
+            height: 24px;
         }
         .time-input:focus {
             outline: 2px solid var(--tg-theme-button-color,#2481cc);
@@ -663,7 +666,7 @@
                         const currentLessons = collectAdd();
                         if (currentLessons[lessonIndex]) {
                             const [name, color] = currentLessons[lessonIndex];
-                            cell.innerHTML = `<div style="font-weight: bold; margin-bottom: 2px;">${name}</div><div style="font-size: 10px; opacity: 0.8;">${room}</div><div style="font-size: 8px; opacity: 0.6; margin-top: 2px;">Клик для изменения</div>`;
+                            cell.innerHTML = `<div style="font-weight: bold; font-size: 8px; margin-bottom: 1px;">${name}</div><div style="font-size: 7px; opacity: 0.8;">${room}</div>`;
                             cell.style.backgroundColor = color;
                             cell.style.color = '#fff';
                             cell.classList.add('occupied');
