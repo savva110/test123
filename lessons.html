@@ -49,13 +49,22 @@
         
         .time-settings { 
             display: flex; 
-            gap: 10px; 
+            gap: 15px; 
             margin-bottom: 15px; 
             flex-wrap: wrap;
         }
+        .time-column {
+            flex: 1;
+            min-width: 150px;
+        }
+        .time-column label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+            opacity: 0.8;
+        }
         .time-input { 
-            flex: 1; 
-            min-width: 120px; 
+            width: 100%; 
             padding: 8px; 
             border: 2px solid var(--tg-theme-hint-color,#374151); 
             background: transparent; 
@@ -183,8 +192,14 @@
                     
                     <!-- Настройки времени -->
                     <div class="time-settings">
-                        <input type="time" id="start-time" class="time-input" value="08:00">
-                        <input type="time" id="end-time" class="time-input" value="14:00">
+                        <div class="time-column">
+                            <label>Начало урока</label>
+                            <input type="time" id="start-time" class="time-input" value="08:00">
+                        </div>
+                        <div class="time-column">
+                            <label>Конец урока</label>
+                            <input type="time" id="end-time" class="time-input" value="14:00">
+                        </div>
                     </div>
                     
                     <!-- Таблица расписания -->
@@ -300,7 +315,7 @@
             if (lessons.length){ lessons.forEach(([n,c,s])=> addList.appendChild(createAddRow(n,c,!!s))); }
             else { addList.appendChild(createAddRow()); }
             // Обновляем расписание при изменении уроков
-            initSchedule();
+            renderScheduleLessons();
             refreshSaveState();
         }
         function collectAdd(){
@@ -314,7 +329,10 @@
             const container = document.getElementById('lessons-container');
             container.innerHTML = '';
             
-            lessons.forEach((lesson, index) => {
+            // Используем текущие уроки (включая несохраненные)
+            const currentLessons = collectAdd();
+            
+            currentLessons.forEach((lesson, index) => {
                 const [name, color, hasSub] = lesson;
                 const item = document.createElement('div');
                 item.className = 'lesson-item';
@@ -375,11 +393,14 @@
                     const cellData = currentSchedule[cellId];
                     if (cellData) {
                         const [lessonIndex, room] = cellData;
-                        const [name, color] = lessons[lessonIndex];
-                        cell.textContent = name;
-                        cell.style.backgroundColor = color;
-                        cell.style.color = '#fff';
-                        cell.classList.add('occupied');
+                        const currentLessons = collectAdd();
+                        if (currentLessons[lessonIndex]) {
+                            const [name, color] = currentLessons[lessonIndex];
+                            cell.textContent = name;
+                            cell.style.backgroundColor = color;
+                            cell.style.color = '#fff';
+                            cell.classList.add('occupied');
+                        }
                     }
                     
                     row.appendChild(cell);
@@ -397,30 +418,31 @@
             
             selectedCell = cellId;
             const [dayNum, lessonNum] = cellId.split('-').map(Number);
-            const [name, color, hasSub] = lessons[selectedLesson];
+            const currentLessons = collectAdd();
+            const [name, color, hasSub] = currentLessons[selectedLesson];
             
-            // Если урок с подгруппами, показываем модальное окно для каждой подгруппы
-            if (hasSub && subgroups > 1) {
-                showSubgroupModal(name, color, cellId);
-            } else {
-                // Обычный урок - сразу добавляем
-                addLessonToCell(cellId, selectedLesson, '');
-            }
+            // Всегда показываем модальное окно для ввода кабинета
+            showRoomModal(name, color, cellId, hasSub);
         }
         
-        function showSubgroupModal(lessonName, color, cellId) {
+        function showRoomModal(lessonName, color, cellId, hasSub) {
             const modal = document.getElementById('room-modal');
             const title = document.getElementById('modal-title');
             const input = document.getElementById('room-input');
             
-            title.textContent = `${lessonName} - Подгруппы`;
-            input.placeholder = 'Кабинеты для подгрупп (через запятую)';
+            if (hasSub && subgroups > 1) {
+                title.textContent = `${lessonName} - Подгруппы`;
+                input.placeholder = 'Кабинеты для подгрупп (через запятую): 101, 102, 103';
+            } else {
+                title.textContent = `${lessonName} - Кабинет`;
+                input.placeholder = 'Номер кабинета: 101';
+            }
             input.value = '';
             
             modal.style.display = 'block';
             
             // Сохраняем данные для модального окна
-            window.modalData = { cellId, lessonIndex: selectedLesson };
+            window.modalData = { cellId, lessonIndex: selectedLesson, hasSub };
         }
         
         function addLessonToCell(cellId, lessonIndex, room) {
@@ -433,10 +455,40 @@
             const input = document.getElementById('room-input');
             const room = input.value.trim();
             
-            if (window.modalData) {
-                addLessonToCell(window.modalData.cellId, window.modalData.lessonIndex, room);
-                closeModal();
+            if (!window.modalData) return;
+            
+            // Валидация кабинета
+            if (!room) {
+                alert('Введите номер кабинета');
+                return;
             }
+            
+            const { cellId, lessonIndex, hasSub } = window.modalData;
+            
+            if (hasSub && subgroups > 1) {
+                // Валидация для подгрупп
+                const rooms = room.split(',').map(r => r.trim()).filter(r => r);
+                if (rooms.length !== subgroups) {
+                    alert(`Для подгрупп нужно указать ${subgroups} кабинета через запятую`);
+                    return;
+                }
+                // Проверяем формат кабинетов (только цифры и буквы)
+                for (const r of rooms) {
+                    if (!/^[0-9A-Za-z]+$/.test(r)) {
+                        alert('Номер кабинета должен содержать только цифры и буквы');
+                        return;
+                    }
+                }
+            } else {
+                // Валидация для обычного урока
+                if (!/^[0-9A-Za-z]+$/.test(room)) {
+                    alert('Номер кабинета должен содержать только цифры и буквы');
+                    return;
+                }
+            }
+            
+            addLessonToCell(cellId, lessonIndex, room);
+            closeModal();
         }
         
         function closeModal() {
@@ -480,7 +532,7 @@
         
         // Инициализация
         renderAdd();
-        initSchedule();
+        renderSchedule();
         refreshSaveState();
     </script>
 </body>
