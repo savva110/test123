@@ -47,31 +47,6 @@
         .lesson-item:hover { border-color: var(--tg-theme-button-color,#2481cc); }
         .lesson-item.selected { border-color: var(--tg-theme-button-color,#2481cc); background: var(--tg-theme-button-color,#2481cc); }
         
-        .time-settings { 
-            display: flex; 
-            gap: 15px; 
-            margin-bottom: 15px; 
-            flex-wrap: wrap;
-        }
-        .time-column {
-            flex: 1;
-            min-width: 150px;
-        }
-        .time-column label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 12px;
-            opacity: 0.8;
-        }
-        .time-input { 
-            width: 100%; 
-            padding: 8px; 
-            border: 2px solid var(--tg-theme-hint-color,#374151); 
-            background: transparent; 
-            color: inherit; 
-            border-radius: 8px; 
-            font-size: 14px; 
-        }
         
         .schedule-container { overflow-x: auto; margin-bottom: 15px; }
         .schedule-table { 
@@ -81,9 +56,9 @@
         }
         .schedule-table th, .schedule-table td { 
             border: 1px solid var(--tg-theme-hint-color,#374151); 
-            padding: 8px; 
+            padding: 4px; 
             text-align: center; 
-            font-size: 12px;
+            font-size: 10px;
         }
         .schedule-table th { 
             background: var(--tg-theme-secondary-bg-color,#111827); 
@@ -92,10 +67,80 @@
         .schedule-table td { 
             cursor: pointer; 
             transition: background-color 0.2s;
-            min-height: 40px;
-            height: 40px;
+            min-height: 30px;
+            height: 30px;
+            vertical-align: middle;
         }
-        .schedule-table td:hover { background: var(--tg-theme-hint-color,#374151); }
+        .schedule-table td:first-child {
+            cursor: default;
+            background: var(--tg-theme-secondary-bg-color,#111827);
+            font-weight: bold;
+            width: 50px;
+            min-width: 50px;
+            max-width: 50px;
+        }
+        .schedule-table td:nth-child(2),
+        .schedule-table td:nth-child(3) {
+            cursor: pointer;
+            background: var(--tg-theme-secondary-bg-color,#111827);
+            font-weight: bold;
+            width: 50px;
+            min-width: 50px;
+            max-width: 50px;
+            transition: background-color 0.2s;
+        }
+        .schedule-table td:nth-child(2):hover,
+        .schedule-table td:nth-child(3):hover {
+            background: var(--tg-theme-hint-color,#374151);
+        }
+        .schedule-table th:first-child {
+            width: 50px;
+            min-width: 50px;
+            max-width: 50px;
+        }
+        .schedule-table th:nth-child(2),
+        .schedule-table th:nth-child(3) {
+            width: 100px;
+            min-width: 100px;
+            max-width: 100px;
+        }
+        
+        /* Стили для полей времени */
+        .time-input {
+            width: calc(100% - 4px);
+            padding: 6px 4px;
+            border: 1px solid var(--tg-theme-hint-color,#374151);
+            background: var(--tg-theme-secondary-bg-color,#111827);
+            color: var(--tg-theme-text-color,#e5e7eb);
+            border-radius: 6px;
+            font-size: 12px;
+            text-align: center;
+            box-sizing: border-box;
+            margin: 2px;
+        }
+        .time-input:focus {
+            outline: 2px solid var(--tg-theme-button-color,#2481cc);
+            outline-offset: 1px;
+            border-color: var(--tg-theme-button-color,#2481cc);
+        }
+        .time-input::placeholder {
+            color: var(--tg-theme-hint-color,#6b7280);
+        }
+        /* Стили для ячеек с полями времени */
+        .schedule-table td:nth-child(2),
+        .schedule-table td:nth-child(3) {
+            padding: 2px;
+            overflow: hidden;
+            position: relative;
+        }
+        /* Убираем hover эффект для ячеек с полями времени */
+        .schedule-table td:nth-child(2):hover,
+        .schedule-table td:nth-child(3):hover {
+            background: transparent;
+        }
+        .schedule-table td:hover:not(:first-child) { 
+            background: var(--tg-theme-hint-color,#374151); 
+        }
         .schedule-table td.occupied { 
             background: var(--tg-theme-button-color,#2481cc); 
             color: var(--tg-theme-button-text-color,#fff);
@@ -190,17 +235,6 @@
                         <!-- Уроки будут добавлены динамически -->
                     </div>
                     
-                    <!-- Настройки времени -->
-                    <div class="time-settings">
-                        <div class="time-column">
-                            <label>Начало урока</label>
-                            <input type="time" id="start-time" class="time-input" value="08:00">
-                        </div>
-                        <div class="time-column">
-                            <label>Конец урока</label>
-                            <input type="time" id="end-time" class="time-input" value="14:00">
-                        </div>
-                    </div>
                     
                     <!-- Таблица расписания -->
                     <div class="schedule-container">
@@ -208,6 +242,8 @@
                             <thead>
                                 <tr>
                                     <th>Урок</th>
+                                    <th>Начало</th>
+                                    <th>Конец</th>
                                     <!-- Дни недели будут добавлены динамически -->
                                 </tr>
                             </thead>
@@ -232,10 +268,12 @@
             <input type="text" id="room-input" placeholder="Номер кабинета">
             <div class="modal-buttons">
                 <button class="cancel" onclick="closeModal()">Отмена</button>
+                <button class="rm" onclick="deleteLesson()" style="background: #ef4444; color: white;">Удалить</button>
                 <button class="save" onclick="saveLesson()">Сохранить</button>
             </div>
         </div>
     </div>
+    
     
     <script>
         const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
@@ -260,6 +298,30 @@
         
         // Названия дней недели
         const weekdayNames = ['', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+        
+        // Функция валидации времени
+        function validateTimeInputs(startInput, endInput) {
+            const startTime = startInput.value;
+            const endTime = endInput.value;
+            
+            if (startTime && endTime) {
+                const startMinutes = timeToMinutes(startTime);
+                const endMinutes = timeToMinutes(endTime);
+                
+                if (startMinutes >= endMinutes) {
+                    alert('Время начала урока должно быть раньше времени окончания');
+                    endInput.value = '';
+                    endInput.focus();
+                }
+            }
+        }
+        
+        // Вспомогательная функция для конвертации времени в минуты
+        function timeToMinutes(timeString) {
+            const [hours, minutes] = timeString.split(':').map(Number);
+            return hours * 60 + minutes;
+        }
+        
         
         function setDisabled(btn, disabled){
             if (!btn) return;
@@ -360,7 +422,7 @@
             const tbody = table.querySelector('tbody');
             
             // Очищаем заголовки
-            thead.innerHTML = '<th>Урок</th>';
+            thead.innerHTML = '<th>Урок</th><th>Начало</th><th>Конец</th>';
             
             // Добавляем дни недели
             weekdays.forEach(dayNum => {
@@ -382,6 +444,26 @@
                 lessonCell.style.fontWeight = 'bold';
                 row.appendChild(lessonCell);
                 
+                // Время начала урока
+                const startTimeCell = document.createElement('td');
+                const startTimeInput = document.createElement('input');
+                startTimeInput.type = 'time';
+                startTimeInput.className = 'time-input';
+                startTimeInput.placeholder = '--:--';
+                startTimeInput.addEventListener('change', () => validateTimeInputs(startTimeInput, endTimeInput));
+                startTimeCell.appendChild(startTimeInput);
+                row.appendChild(startTimeCell);
+                
+                // Время конца урока
+                const endTimeCell = document.createElement('td');
+                const endTimeInput = document.createElement('input');
+                endTimeInput.type = 'time';
+                endTimeInput.className = 'time-input';
+                endTimeInput.placeholder = '--:--';
+                endTimeInput.addEventListener('change', () => validateTimeInputs(startTimeInput, endTimeInput));
+                endTimeCell.appendChild(endTimeInput);
+                row.appendChild(endTimeCell);
+                
                 // Ячейки для каждого дня
                 weekdays.forEach(dayNum => {
                     const cell = document.createElement('td');
@@ -396,7 +478,7 @@
                         const currentLessons = collectAdd();
                         if (currentLessons[lessonIndex]) {
                             const [name, color] = currentLessons[lessonIndex];
-                            cell.textContent = name;
+                            cell.innerHTML = `<div style="font-weight: bold; margin-bottom: 2px;">${name}</div><div style="font-size: 10px; opacity: 0.8;">${room}</div><div style="font-size: 8px; opacity: 0.6; margin-top: 2px;">Клик для изменения</div>`;
                             cell.style.backgroundColor = color;
                             cell.style.color = '#fff';
                             cell.classList.add('occupied');
@@ -411,6 +493,21 @@
         }
         
         function selectCell(cellId) {
+            // Если в ячейке уже есть урок, показываем опции редактирования
+            if (currentSchedule[cellId]) {
+                const [lessonIndex, room] = currentSchedule[cellId];
+                const currentLessons = collectAdd();
+                if (currentLessons[lessonIndex]) {
+                    const [name, color, hasSub] = currentLessons[lessonIndex];
+                    if (confirm(`В ячейке уже есть урок "${name}" (${room}). Заменить на другой урок?`)) {
+                        // Выбираем этот урок для замены
+                        selectedLesson = lessonIndex;
+                        showRoomModal(name, color, cellId, hasSub);
+                    }
+                }
+                return;
+            }
+            
             if (!selectedLesson && selectedLesson !== 0) {
                 alert('Сначала выберите урок');
                 return;
@@ -472,17 +569,17 @@
                     alert(`Для подгрупп нужно указать ${subgroups} кабинета через запятую`);
                     return;
                 }
-                // Проверяем формат кабинетов (только цифры и буквы)
+                // Проверяем формат кабинетов (цифры, буквы, дефисы)
                 for (const r of rooms) {
-                    if (!/^[0-9A-Za-z]+$/.test(r)) {
-                        alert('Номер кабинета должен содержать только цифры и буквы');
+                    if (!/^[0-9A-Za-z-]+$/.test(r)) {
+                        alert('Номер кабинета должен содержать только цифры, буквы и дефисы');
                         return;
                     }
                 }
             } else {
                 // Валидация для обычного урока
-                if (!/^[0-9A-Za-z]+$/.test(room)) {
-                    alert('Номер кабинета должен содержать только цифры и буквы');
+                if (!/^[0-9A-Za-z-]+$/.test(room)) {
+                    alert('Номер кабинета должен содержать только цифры, буквы и дефисы');
                     return;
                 }
             }
@@ -491,11 +588,21 @@
             closeModal();
         }
         
+        function deleteLesson() {
+            if (window.modalData && window.modalData.cellId) {
+                delete currentSchedule[window.modalData.cellId];
+                renderSchedule();
+                refreshSaveState();
+                closeModal();
+            }
+        }
+        
+        
         function closeModal() {
             document.getElementById('room-modal').style.display = 'none';
             window.modalData = null;
         }
-        
+
         // Инициализация расписания
         function initSchedule() {
             renderScheduleLessons();
@@ -522,13 +629,14 @@
         };
         // удаление происходит на месте (кнопкой у элемента). Отправляем только общий список через add-submit
 
-        // Закрытие модального окна по клику вне его
+        // Закрытие модальных окон по клику вне их
         window.onclick = (event) => {
-            const modal = document.getElementById('room-modal');
-            if (event.target === modal) {
+            const roomModal = document.getElementById('room-modal');
+            if (event.target === roomModal) {
                 closeModal();
             }
         };
+        
         
         // Инициализация
         renderAdd();
