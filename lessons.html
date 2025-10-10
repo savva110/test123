@@ -199,6 +199,99 @@
             color: var(--tg-theme-text-color,#e5e7eb); 
         }
 
+        /* Кастомные уведомления */
+        .notification-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .notification-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .notification {
+            background: var(--tg-theme-secondary-bg-color,#111827);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        
+        .notification-overlay.show .notification {
+            transform: scale(1);
+        }
+        
+        .notification-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .notification-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--tg-theme-text-color,#e5e7eb);
+        }
+        
+        .notification-message {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color,#9ca3af);
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        
+        .notification-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .notification-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            min-width: 80px;
+        }
+        
+        .notification-button.primary {
+            background: var(--tg-theme-button-color,#2481cc);
+            color: var(--tg-theme-button-text-color,#fff);
+        }
+        
+        .notification-button.secondary {
+            background: var(--tg-theme-hint-color,#374151);
+            color: var(--tg-theme-text-color,#e5e7eb);
+        }
+        
+        .notification-button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        .notification-button:active {
+            transform: translateY(0);
+        }
+
         @media (min-width:420px) {
             .section { padding:12px; }
             .item { padding:12px; }
@@ -274,10 +367,102 @@
         </div>
     </div>
     
+    <!-- Кастомные уведомления -->
+    <div id="notification-overlay" class="notification-overlay">
+        <div class="notification">
+            <div class="notification-icon" id="notification-icon">⚠️</div>
+            <div class="notification-title" id="notification-title">Внимание</div>
+            <div class="notification-message" id="notification-message">Сообщение</div>
+            <div class="notification-buttons" id="notification-buttons">
+                <button class="notification-button primary" id="notification-ok">OK</button>
+            </div>
+        </div>
+    </div>
+    
     
     <script>
         const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
         const urlParams = new URLSearchParams(location.search);
+        
+        // Функции для кастомных уведомлений
+        function showNotification(title, message, type = 'warning', onConfirm = null) {
+            const overlay = document.getElementById('notification-overlay');
+            const icon = document.getElementById('notification-icon');
+            const titleEl = document.getElementById('notification-title');
+            const messageEl = document.getElementById('notification-message');
+            const buttonsEl = document.getElementById('notification-buttons');
+            
+            // Устанавливаем иконку в зависимости от типа
+            const icons = {
+                'warning': '⚠️',
+                'error': '❌',
+                'success': '✅',
+                'info': 'ℹ️',
+                'question': '❓'
+            };
+            icon.textContent = icons[type] || icons['warning'];
+            
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            
+            // Очищаем кнопки
+            buttonsEl.innerHTML = '';
+            
+            if (type === 'question') {
+                // Для вопросов показываем две кнопки
+                const confirmBtn = document.createElement('button');
+                confirmBtn.className = 'notification-button primary';
+                confirmBtn.textContent = 'Да';
+                confirmBtn.onclick = () => {
+                    hideNotification();
+                    if (onConfirm) onConfirm(true);
+                };
+                
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'notification-button secondary';
+                cancelBtn.textContent = 'Нет';
+                cancelBtn.onclick = () => {
+                    hideNotification();
+                    if (onConfirm) onConfirm(false);
+                };
+                
+                buttonsEl.appendChild(confirmBtn);
+                buttonsEl.appendChild(cancelBtn);
+            } else {
+                // Для остальных типов показываем одну кнопку
+                const okBtn = document.createElement('button');
+                okBtn.className = 'notification-button primary';
+                okBtn.textContent = 'OK';
+                okBtn.onclick = () => {
+                    hideNotification();
+                    if (onConfirm) onConfirm();
+                };
+                
+                buttonsEl.appendChild(okBtn);
+            }
+            
+            // Показываем уведомление
+            overlay.classList.add('show');
+        }
+        
+        function hideNotification() {
+            const overlay = document.getElementById('notification-overlay');
+            overlay.classList.remove('show');
+        }
+        
+        // Функция для замены alert
+        function customAlert(message) {
+            return new Promise((resolve) => {
+                showNotification('Внимание', message, 'warning', resolve);
+            });
+        }
+        
+        // Функция для замены confirm
+        function customConfirm(message) {
+            return new Promise((resolve) => {
+                showNotification('Подтверждение', message, 'question', resolve);
+            });
+        }
         function getLessons() { try { return JSON.parse(urlParams.get('lessons')||'[]'); } catch { return []; } }
         function getSchedule() { try { return JSON.parse(urlParams.get('schedule')||'{}'); } catch { return {}; } }
         function getWeekdays() { try { return JSON.parse(urlParams.get('weekdays')||'[1,2,3,4,5]'); } catch { return [1,2,3,4,5]; } }
@@ -309,7 +494,7 @@
                 const endMinutes = timeToMinutes(endTime);
                 
                 if (startMinutes >= endMinutes) {
-                    alert('Время начала урока должно быть раньше времени окончания');
+                    showNotification('Ошибка времени', 'Время начала урока должно быть раньше времени окончания', 'error');
                     endInput.value = '';
                     endInput.focus();
                 }
@@ -499,17 +684,19 @@
                 const currentLessons = collectAdd();
                 if (currentLessons[lessonIndex]) {
                     const [name, color, hasSub] = currentLessons[lessonIndex];
-                    if (confirm(`В ячейке уже есть урок "${name}" (${room}). Заменить на другой урок?`)) {
-                        // Выбираем этот урок для замены
-                        selectedLesson = lessonIndex;
-                        showRoomModal(name, color, cellId, hasSub);
-                    }
+                    showNotification('Заменить урок?', `В ячейке уже есть урок "${name}" (${room}). Заменить на другой урок?`, 'question', (confirmed) => {
+                        if (confirmed) {
+                            // Выбираем этот урок для замены
+                            selectedLesson = lessonIndex;
+                            showRoomModal(name, color, cellId, hasSub);
+                        }
+                    });
                 }
                 return;
             }
             
             if (!selectedLesson && selectedLesson !== 0) {
-                alert('Сначала выберите урок');
+                showNotification('Выберите урок', 'Сначала выберите урок из списка выше', 'info');
                 return;
             }
             
@@ -556,7 +743,7 @@
             
             // Валидация кабинета
             if (!room) {
-                alert('Введите номер кабинета');
+                showNotification('Пустое поле', 'Введите номер кабинета', 'warning');
                 return;
             }
             
@@ -566,20 +753,20 @@
                 // Валидация для подгрупп
                 const rooms = room.split(',').map(r => r.trim()).filter(r => r);
                 if (rooms.length !== subgroups) {
-                    alert(`Для подгрупп нужно указать ${subgroups} кабинета через запятую`);
+                    showNotification('Неверное количество кабинетов', `Для подгрупп нужно указать ${subgroups} кабинета через запятую`, 'error');
                     return;
                 }
                 // Проверяем формат кабинетов (цифры, буквы, дефисы)
                 for (const r of rooms) {
                     if (!/^[0-9A-Za-z-]+$/.test(r)) {
-                        alert('Номер кабинета должен содержать только цифры, буквы и дефисы');
+                        showNotification('Неверный формат кабинета', 'Номер кабинета должен содержать только цифры, буквы и дефисы', 'error');
                         return;
                     }
                 }
             } else {
                 // Валидация для обычного урока
                 if (!/^[0-9A-Za-z-]+$/.test(room)) {
-                    alert('Номер кабинета должен содержать только цифры, буквы и дефисы');
+                    showNotification('Неверный формат кабинета', 'Номер кабинета должен содержать только цифры, буквы и дефисы', 'error');
                     return;
                 }
             }
@@ -632,8 +819,14 @@
         // Закрытие модальных окон по клику вне их
         window.onclick = (event) => {
             const roomModal = document.getElementById('room-modal');
+            const notificationOverlay = document.getElementById('notification-overlay');
+            
             if (event.target === roomModal) {
                 closeModal();
+            }
+            
+            if (event.target === notificationOverlay) {
+                hideNotification();
             }
         };
         
