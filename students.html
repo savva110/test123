@@ -32,15 +32,28 @@
         /* Pointer cursor on interactive elements */
         .buttons button, #save-all, .rm:not(.disabled), .toggle, input[type="checkbox"], select.subgroup, .select-wrap { cursor: pointer; }
         /* Styled select for subgroup to match site visuals */
-        .select-wrap { position: relative; display: inline-block; }
-        select.subgroup { 
-            background: #ffffff08; 
-            border: 1px solid var(--tg-theme-hint-color,#374151); 
-            color: inherit; 
-            border-radius: 10px; 
-            line-height: 1.2;
+        .select-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            background: #ffffff08;
+            border: 1px solid var(--tg-theme-hint-color,#374151);
+            border-radius: 10px;
+            height: 36px;
+        }
+        select.subgroup {
+            background: transparent;
+            border: none;
+            color: inherit;
+            border-radius: 10px;
+            padding: 0 32px 0 12px;
+            font-size: 13px;
+            line-height: 1;
+            height: 100%;
             outline: none;
-            appearance: none; 
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
             min-width: 130px;
         }
         .select-wrap::after {
@@ -48,19 +61,20 @@
             position: absolute;
             right: 12px;
             top: 50%;
-            margin-top: -3px;
+            margin-top: -2px;
             border-top: 6px solid var(--tg-theme-button-color,#93c5fd);
             border-left: 5px solid transparent;
             border-right: 5px solid transparent;
             pointer-events: none;
             opacity: .9;
         }
-        select.subgroup:focus { 
-            border-color: var(--tg-theme-button-color,#2481cc); 
-            box-shadow: 0 0 0 2px #2481cc33; 
+        .select-wrap:focus-within {
+            border-color: var(--tg-theme-button-color,#2481cc);
+            box-shadow: 0 0 0 2px #2481cc33;
         }
         @media (min-width:420px) {
-            select.subgroup { font-size: 14px; padding: 9px 0px 9px 14px; }
+            .select-wrap { height: 40px; }
+            select.subgroup { font-size: 14px; padding: 0 36px 0 14px; }
         }
 
         @media (min-width:420px) {
