@@ -109,11 +109,42 @@
                     const val = parseInt(target.value || '0', 10);
                     if (Number.isInteger(val) && val >= 1 && val <= 4) {
                         currentSubgroups = val;
+                        refreshButtonsState();
                     }
                 }
             });
         }
         syncRadios();
+        
+        // === Управление доступностью кнопок "Сохранить" при отсутствии изменений ===
+        const saveNameBtn = document.getElementById('save-name');
+        const saveSubsBtn = document.getElementById('save-subgroups');
+        // saveWeekdaysBtn объявлен ниже после вставки секции
+        function setDisabled(btn, disabled){
+            if (!btn) return;
+            if (disabled){ btn.classList.add('disabled'); btn.setAttribute('disabled', 'disabled'); }
+            else { btn.classList.remove('disabled'); btn.removeAttribute('disabled'); }
+        }
+        const initial = {
+            name: String(prefilled || '').trim(),
+            subgroups: currentSubgroups,
+            weekdays: [...currentWeekdays]
+        };
+        function isEqualWeekdays(a, b){
+            if (!Array.isArray(a) || !Array.isArray(b)) return false;
+            if (a.length !== b.length) return false;
+            for (let i=0;i<a.length;i++){ if (a[i] !== b[i]) return false; }
+            return true;
+        }
+        function refreshButtonsState(){
+            const nameNow = String(document.getElementById('class-name').value || '').trim();
+            setDisabled(saveNameBtn, nameNow === initial.name);
+            setDisabled(saveSubsBtn, currentSubgroups === initial.subgroups);
+            const wdNow = [...currentWeekdays].sort((a,b)=>a-b);
+            const wdInit = [...initial.weekdays].sort((a,b)=>a-b);
+            const saveWeekdaysBtnLocal = document.getElementById('save-weekdays');
+            setDisabled(saveWeekdaysBtnLocal, isEqualWeekdays(wdNow, wdInit));
+        }
         
         // UI для выбора дней недели (чекбоксы)
         const weekdaysSection = document.createElement('div');
@@ -162,6 +193,7 @@
                     currentWeekdays = currentWeekdays.filter(n => n !== v);
                 }
                 currentWeekdays.sort((a,b)=>a-b);
+                refreshButtonsState();
             });
         }
         
@@ -190,6 +222,8 @@
             
             // Отправляем данные
             tg.sendData(JSON.stringify({ action:'set_class_name', name }));
+            initial.name = name;
+            refreshButtonsState();
         };
 
         // Обработчик сохранения количества подгрупп
@@ -201,6 +235,8 @@
             }
             showStatus('⏳ Сохранение...', 'loading', 'status-subgroups');
             tg.sendData(JSON.stringify({ action: 'set_subgroups', count }));
+            initial.subgroups = count;
+            refreshButtonsState();
         };
         
         // Обработка Enter в поле ввода
@@ -209,6 +245,7 @@
                 document.getElementById('save-name').click();
             }
         });
+        document.getElementById('class-name').addEventListener('input', refreshButtonsState);
 
         // Обработчик сохранения дней обучения
         const saveWeekdaysBtn = document.getElementById('save-weekdays');
@@ -221,6 +258,8 @@
                 }
                 showStatus('⏳ Сохранение...', 'loading', 'status-weekdays');
                 tg.sendData(JSON.stringify({ action: 'set_weekdays', weekdays: normalized }));
+                initial.weekdays = [...normalized];
+                refreshButtonsState();
             };
         }
 
@@ -246,6 +285,9 @@
                 tg.sendData(JSON.stringify({ action: 'disband_class' }));
             };
         }
+
+        // Инициализируем заблокированное состояние кнопок на старте
+        refreshButtonsState();
     </script>
 </body>
 </html>

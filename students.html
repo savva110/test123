@@ -20,6 +20,7 @@
         .row label { display:flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap; }
         .buttons { display:flex; gap:8px; margin-top:8px; }
         .buttons a, .buttons button, #save-all { display:block; width:100%; text-decoration:none; text-align:center; background:var(--tg-theme-button-color,#2481cc); color:var(--tg-theme-button-text-color,#fff); padding:12px; border-radius:12px; border:none; font-size:14px; }
+        #save-all.disabled { opacity:.6; pointer-events:none; }
         .ghost { background:transparent; color:var(--tg-theme-button-color,#93c5fd); border:1px solid var(--tg-theme-button-color,#2481cc); }
         .item { background:#ffffff10; border-radius:10px; padding:10px; margin-top:8px; }
         .rm { background:#ef4444; color:#fff; border:none; border-radius:10px; padding:10px 12px; }
@@ -75,11 +76,56 @@
         const tg = window.Telegram.WebApp; tg.ready(); tg.expand();
 
         const list = document.getElementById('students-list');
+        const saveBtn = document.getElementById('save-all');
         const urlParams = new URLSearchParams(location.search);
         function getPrefilledStudents(){
             try { return JSON.parse(urlParams.get('students')||'[]'); } catch { return []; }
         }
         const prefilledStudents = getPrefilledStudents();
+
+        function setDisabled(btn, disabled){
+            if (!btn) return;
+            if (disabled){ btn.classList.add('disabled'); btn.setAttribute('disabled','disabled'); }
+            else { btn.classList.remove('disabled'); btn.removeAttribute('disabled'); }
+        }
+        function normalizeStudentRowData(row){
+            const inputs = row.querySelectorAll('input[type="text"]');
+            const f = String(inputs[0]?.value || '').trim();
+            const l = String(inputs[1]?.value || '').trim();
+            const cEl = inputs[2] || null;
+            const c = cEl ? String(cEl.value || '').trim() : '';
+            const cb = row.querySelector('input[type="checkbox"]');
+            const leader = cb ? Boolean(cb.checked) : false;
+            const hasId = row.hasAttribute('data-user-id');
+            const id = hasId ? Number(row.dataset.userId) : null;
+            return { id, first_name: f, last_name: l, code: c, leader };
+        }
+        function areStudentsEqual(a, b){
+            if (!Array.isArray(a) || !Array.isArray(b)) return false;
+            if (a.length !== b.length) return false;
+            for (let i=0;i<a.length;i++){
+                const x=a[i], y=b[i];
+                if ((x.id??null)!==(y.id??null)) return false;
+                if (String(x.first_name||'')!==String(y.first_name||'')) return false;
+                if (String(x.last_name||'')!==String(y.last_name||'')) return false;
+                if ((x.id??null)===null){ // только для новых сравниваем код
+                    if (String(x.code||'')!==String(y.code||'')) return false;
+                }
+                if (Boolean(x.leader)!==Boolean(y.leader)) return false;
+            }
+            return true;
+        }
+        function snapshotCurrentStudents(){
+            const rows = list.querySelectorAll('.item');
+            const res = [];
+            rows.forEach(r => res.push(normalizeStudentRowData(r)));
+            return res;
+        }
+        let initialSnapshot = [];
+        function refreshSaveState(){
+            const current = snapshotCurrentStudents();
+            setDisabled(saveBtn, areStudentsEqual(initialSnapshot, current));
+        }
 
         function createStudentRow(firstName = '', lastName = '', code = '', isLeader = false, id = null){
             const wrap = document.createElement('div');
@@ -101,7 +147,10 @@
                 const codeInput = wrap.querySelector('.code');
                 if (codeInput) codeInput.style.display = 'none';
             }
-            wrap.querySelector('.rm').onclick = () => wrap.remove();
+            wrap.querySelector('.rm').onclick = () => { wrap.remove(); refreshSaveState(); };
+            // подписки на изменения
+            const inputs = wrap.querySelectorAll('input[type="text"], input[type="checkbox"]');
+            inputs.forEach(inp => inp.addEventListener(inp.type==='checkbox'?'change':'input', refreshSaveState));
             return wrap;
         }
 
@@ -132,6 +181,8 @@
             } else {
                 list.appendChild(createStudentRow());
             }
+            initialSnapshot = snapshotCurrentStudents();
+            refreshSaveState();
         }
 
         function collectStudents(){
@@ -156,7 +207,7 @@
             return res;
         }
 
-        document.getElementById('add-student').onclick = () => list.appendChild(createStudentRow());
+        document.getElementById('add-student').onclick = () => { list.appendChild(createStudentRow()); refreshSaveState(); };
         document.getElementById('save-all').onclick = () => {
             const students = collectStudents();
             tg.sendData(JSON.stringify({ action: 'add_students', students: students }));
@@ -171,6 +222,9 @@
                     }
                 }
             });
+            // обновляем снапшот и блокируем кнопку до следующего изменения
+            initialSnapshot = snapshotCurrentStudents();
+            refreshSaveState();
         };
 
         render();

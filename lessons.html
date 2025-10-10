@@ -25,6 +25,7 @@
         .item { background:#ffffff10; border-radius:10px; padding:10px; margin-top:8px; }
         .rm { background:#ef4444; color:#fff; border:none; border-radius:10px; padding:10px 12px; }
         .rm:active { opacity:.9; }
+        #save-all.disabled { opacity:.6; pointer-events:none; }
         .toggle { background:#ffffff08; border:1px solid var(--tg-theme-hint-color,#374151); border-radius:10px; padding:6px 10px; }
         .toggle input[type="checkbox"] { width:16px; height:16px; }
         .hint { font-size:12px; opacity:.7; margin:6px 0 0; }
@@ -76,6 +77,29 @@
         let lessons = getLessons();
 
         const addList = document.getElementById('add-list');
+        const saveAllBtn = document.getElementById('save-all');
+        
+        function setDisabled(btn, disabled){
+            if (!btn) return;
+            if (disabled){ btn.classList.add('disabled'); btn.setAttribute('disabled','disabled'); }
+            else { btn.classList.remove('disabled'); btn.removeAttribute('disabled'); }
+        }
+        function isSameLessons(a, b){
+            if (!Array.isArray(a) || !Array.isArray(b)) return false;
+            if (a.length !== b.length) return false;
+            for (let i=0;i<a.length;i++){
+                const x=a[i]||[], y=b[i]||[];
+                if (String(x[0]||'')!==String(y[0]||'')) return false;
+                if (String(x[1]||'')!==String(y[1]||'')) return false;
+                if (Boolean(x[2])!==Boolean(y[2])) return false;
+            }
+            return true;
+        }
+        const initialLessons = JSON.parse(JSON.stringify(lessons));
+        function refreshSaveState(){
+            const current = collectAdd();
+            setDisabled(saveAllBtn, isSameLessons(initialLessons, current));
+        }
 
         function createAddRow(name = '', color = '#2481cc', hasSub = false) {
             const wrap = document.createElement('div');
@@ -92,13 +116,21 @@
                     <button class="rm">Удалить</button>
                 </div>
             `;
-            wrap.querySelector('.rm').onclick = () => wrap.remove();
+            wrap.querySelector('.rm').onclick = () => { wrap.remove(); refreshSaveState(); };
+            // подписываемся на изменения для отслеживания
+            const nameInput = wrap.querySelector('input[type="text"]');
+            const colorInput = wrap.querySelector('input[type="color"]');
+            const cb = wrap.querySelector('input[type="checkbox"]');
+            if (nameInput) nameInput.addEventListener('input', refreshSaveState);
+            if (colorInput) colorInput.addEventListener('input', refreshSaveState);
+            if (cb) cb.addEventListener('change', refreshSaveState);
             return wrap;
         }
         function renderAdd(){
             addList.innerHTML='';
             if (lessons.length){ lessons.forEach(([n,c,s])=> addList.appendChild(createAddRow(n,c,!!s))); }
             else { addList.appendChild(createAddRow()); }
+            refreshSaveState();
         }
         function collectAdd(){
             const rows = addList.querySelectorAll('.item'); const res=[];
@@ -106,15 +138,24 @@
             return res;
         }
 
-        document.getElementById('add-row').onclick = () => addList.appendChild(createAddRow());
+        document.getElementById('add-row').onclick = () => { addList.appendChild(createAddRow()); refreshSaveState(); };
         document.getElementById('save-all').onclick = () => {
             const lessonsToSave = collectAdd();
             // В будущем сюда можно добавить данные расписания
             tg.sendData(JSON.stringify({ action: 'add_lessons', lessons: lessonsToSave }));
+            // После успешной отправки считаем состояние сохранённым и блокируем кнопку
+            lessons = lessonsToSave;
+            while (addList.firstChild) addList.removeChild(addList.firstChild);
+            lessons.forEach(([n,c,s])=> addList.appendChild(createAddRow(n,c,!!s)));
+            // обновим initial и кнопку
+            while (initialLessons.length) initialLessons.pop();
+            lessons.forEach(x=> initialLessons.push([x[0], x[1], !!x[2]]));
+            refreshSaveState();
         };
         // удаление происходит на месте (кнопкой у элемента). Отправляем только общий список через add-submit
 
         renderAdd();
+        refreshSaveState();
     </script>
 </body>
 </html>
