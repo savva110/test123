@@ -44,6 +44,19 @@
             <button id="confirm-disband-no" class="success">Отказаться</button>
         </div>
     </div>
+    <div class="section">
+        <h3>👥 Количество подгрупп</h3>
+        <div class="row">
+            <select id="subgroups-count" style="flex:1; padding:10px; border: 2px solid var(--tg-theme-hint-color,#ccc); border-radius: 10px; font-size: 14px;">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+            </select>
+        </div>
+        <div class="buttons"><button id="save-subgroups">Сохранить</button></div>
+        <div id="status-subgroups"></div>
+    </div>
     <script>
         const tg = window.Telegram.WebApp; 
         tg.ready(); 
@@ -52,10 +65,15 @@
         const params = new URLSearchParams(location.search);
         const prefilled = params.get('className');
         if (prefilled) document.getElementById('class-name').value = prefilled;
+        const prefilledSub = parseInt(params.get('subgroups') || '');
+        if (!Number.isNaN(prefilledSub) && prefilledSub >= 1 && prefilledSub <= 4) {
+            const sel = document.getElementById('subgroups-count');
+            if (sel) sel.value = String(prefilledSub);
+        }
         
         // Функция для показа статуса
-        function showStatus(message, type) {
-            const status = document.getElementById('status');
+        function showStatus(message, type, targetId = 'status') {
+            const status = document.getElementById(targetId);
             status.textContent = message;
             status.className = `status ${type}`;
             
@@ -93,6 +111,18 @@
             
             // Отправляем данные
             tg.sendData(JSON.stringify({ action:'set_class_name', name }));
+        };
+
+        // Обработчик сохранения количества подгрупп
+        document.getElementById('save-subgroups').onclick = () => {
+            const sel = document.getElementById('subgroups-count');
+            const count = parseInt(sel.value, 10);
+            if (!Number.isInteger(count) || count < 1 || count > 4) {
+                showStatus('❌ Некорректное количество подгрупп (1–4)', 'error', 'status-subgroups');
+                return;
+            }
+            showStatus('⏳ Сохранение...', 'loading', 'status-subgroups');
+            tg.sendData(JSON.stringify({ action: 'set_subgroups', count }));
         };
         
         // Обработка Enter в поле ввода
