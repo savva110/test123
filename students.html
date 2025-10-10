@@ -28,54 +28,28 @@
         .rm.disabled { opacity:.6; pointer-events:none; cursor:default; }
         .toggle { background:#ffffff08; border:1px solid var(--tg-theme-hint-color,#374151); border-radius:10px; padding:6px 10px; }
         .toggle input[type="checkbox"] { width:16px; height:16px; }
+        /* Subgroup select styled as a single standalone control */
+        select.subgroup { 
+            appearance: none; -webkit-appearance: none; -moz-appearance: none;
+            background:#ffffff08; 
+            border:1px solid var(--tg-theme-hint-color,#374151); 
+            border-radius:10px; 
+            padding:10px 0px 6px 12px; 
+            color:inherit; 
+            font-size:14px; 
+            line-height:1.35;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23a3a3a3' d='M1.41.59 6 5.17 10.59.59 12 2l-6 6L0 2z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 12px 8px;
+        }
+        .row-bottom select.subgroup { min-width: 140px; }
+        select.subgroup:focus { outline: 2px solid var(--tg-theme-button-color,#2481cc); outline-offset: 2px; }
+        /* Try to slightly lower option text in some browsers */
+        select.subgroup option { padding-top: 6px; padding-bottom: 4px; }
         .hint { font-size:12px; opacity:.7; margin:6px 0 0; }
         /* Pointer cursor on interactive elements */
-        .buttons button, #save-all, .rm:not(.disabled), .toggle, input[type="checkbox"], select.subgroup, .select-wrap { cursor: pointer; }
-        /* Styled select for subgroup to match site visuals */
-        .select-wrap {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            background: #ffffff08;
-            border: 1px solid var(--tg-theme-hint-color,#374151);
-            border-radius: 10px;
-            height: 36px;
-        }
-        select.subgroup {
-            background: transparent;
-            border: none;
-            color: inherit;
-            border-radius: 10px;
-            padding: 0 32px 0 12px;
-            font-size: 13px;
-            line-height: 1;
-            height: 100%;
-            outline: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            appearance: none;
-            min-width: 130px;
-        }
-        .select-wrap::after {
-            content: "";
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            margin-top: -2px;
-            border-top: 6px solid var(--tg-theme-button-color,#93c5fd);
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            pointer-events: none;
-            opacity: .9;
-        }
-        .select-wrap:focus-within {
-            border-color: var(--tg-theme-button-color,#2481cc);
-            box-shadow: 0 0 0 2px #2481cc33;
-        }
-        @media (min-width:420px) {
-            .select-wrap { height: 40px; }
-            select.subgroup { font-size: 14px; padding: 0 36px 0 14px; }
-        }
+        .buttons button, #save-all, .rm:not(.disabled), .toggle, input[type="checkbox"] { cursor: pointer; }
 
         @media (min-width:420px) {
             .section { padding:12px; }
@@ -225,10 +199,7 @@
             const rowBottom = wrap.querySelector('.row-bottom');
             if (rowBottom && Number(role)!==2){
                 const sel = createSubgroupSelect(Math.min(Math.max(1, Number(subgroup)||1), SUBGROUPS_COUNT));
-                const wrapSel = document.createElement('div');
-                wrapSel.className = 'select-wrap';
-                wrapSel.appendChild(sel);
-                rowBottom.insertBefore(wrapSel, rowBottom.querySelector('.rm'));
+                rowBottom.insertBefore(sel, rowBottom.querySelector('.rm'));
             }
             wrap.querySelector('.rm').onclick = () => { wrap.remove(); refreshSaveState(); };
             // подписки на изменения
