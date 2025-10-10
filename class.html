@@ -65,6 +65,18 @@
         if (prefilled) document.getElementById('class-name').value = prefilled;
         const prefilledSub = parseInt(params.get('subgroups') || '');
         let currentSubgroups = (!Number.isNaN(prefilledSub) && prefilledSub >= 1 && prefilledSub <= 4) ? prefilledSub : 1;
+        // Недели (дни недели обучения): по умолчанию Пн–Пт = [1,2,3,4,5]
+        let currentWeekdays = [1,2,3,4,5];
+        try {
+            const wdRaw = params.get('weekdays');
+            if (wdRaw) {
+                const parsed = JSON.parse(wdRaw);
+                if (Array.isArray(parsed)) {
+                    const cleaned = parsed.map(x => parseInt(x, 10)).filter(n => Number.isInteger(n) && n >= 1 && n <= 7);
+                    if (cleaned.length) currentWeekdays = Array.from(new Set(cleaned)).sort((a,b)=>a-b);
+                }
+            }
+        } catch(e) { /* ignore */ }
         
         // Функция для показа статуса
         function showStatus(message, type, targetId = 'status') {
@@ -102,6 +114,56 @@
             });
         }
         syncRadios();
+        
+        // UI для выбора дней недели (чекбоксы)
+        const weekdaysSection = document.createElement('div');
+        weekdaysSection.className = 'section';
+        weekdaysSection.innerHTML = `
+            <h3>📅 Дни обучения</h3>
+            <div class="row" id="weekdays-options" style="gap:10px; flex-wrap:wrap;">
+                <label><input type="checkbox" value="1"> Пн</label>
+                <label><input type="checkbox" value="2"> Вт</label>
+                <label><input type="checkbox" value="3"> Ср</label>
+                <label><input type="checkbox" value="4"> Чт</label>
+                <label><input type="checkbox" value="5"> Пт</label>
+                <label><input type="checkbox" value="6"> Сб</label>
+                <label><input type="checkbox" value="7"> Вс</label>
+            </div>
+            <div class="buttons"><button id="save-weekdays">Сохранить</button></div>
+            <div id="status-weekdays"></div>
+        `;
+        // Вставим секцию после подгрупп
+        const sections = document.querySelectorAll('.section');
+        if (sections && sections[1]) {
+            sections[1].insertAdjacentElement('afterend', weekdaysSection);
+        } else {
+            document.body.appendChild(weekdaysSection);
+        }
+        
+        const weekdaysContainer = weekdaysSection.querySelector('#weekdays-options');
+        function syncWeekdayCheckboxes() {
+            const boxes = weekdaysContainer ? Array.from(weekdaysContainer.querySelectorAll('input[type="checkbox"]')) : [];
+            boxes.forEach(cb => {
+                const v = parseInt(cb.value || '0', 10);
+                cb.checked = currentWeekdays.includes(v);
+            });
+        }
+        syncWeekdayCheckboxes();
+        
+        if (weekdaysContainer) {
+            weekdaysContainer.addEventListener('change', (e) => {
+                const target = e.target;
+                if (!target || target.type !== 'checkbox') return;
+                const v = parseInt(target.value || '0', 10);
+                if (!Number.isInteger(v) || v < 1 || v > 7) return;
+                if (target.checked) {
+                    if (!currentWeekdays.includes(v)) currentWeekdays.push(v);
+                } else {
+                    currentWeekdays = currentWeekdays.filter(n => n !== v);
+                }
+                currentWeekdays.sort((a,b)=>a-b);
+            });
+        }
         
         // Обработчик сохранения названия
         document.getElementById('save-name').onclick = () => {
@@ -147,6 +209,20 @@
                 document.getElementById('save-name').click();
             }
         });
+
+        // Обработчик сохранения дней обучения
+        const saveWeekdaysBtn = document.getElementById('save-weekdays');
+        if (saveWeekdaysBtn) {
+            saveWeekdaysBtn.onclick = () => {
+                const normalized = Array.from(new Set(currentWeekdays.filter(n => Number.isInteger(n) && n>=1 && n<=7))).sort((a,b)=>a-b);
+                if (normalized.length === 0) {
+                    showStatus('❌ Выберите хотя бы один день', 'error', 'status-weekdays');
+                    return;
+                }
+                showStatus('⏳ Сохранение...', 'loading', 'status-weekdays');
+                tg.sendData(JSON.stringify({ action: 'set_weekdays', weekdays: normalized }));
+            };
+        }
 
         // Логика расформирования класса (подтверждение на сайте)
         const disbandToggle = document.getElementById('disband-toggle');
