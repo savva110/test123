@@ -190,6 +190,8 @@ function setupTelegramFeatures() {
         const params = new URLSearchParams();
         if (src.searchParams.get('lessons')) params.set('lessons', src.searchParams.get('lessons'));
         if (src.searchParams.get('className')) params.set('className', src.searchParams.get('className'));
+        if (src.searchParams.get('subgroups')) params.set('subgroups', src.searchParams.get('subgroups'));
+        if (src.searchParams.get('weekdays')) params.set('weekdays', src.searchParams.get('weekdays'));
         if (src.searchParams.get('students')) params.set('students', src.searchParams.get('students'));
         const q = params.toString();
         window.location.href = to + (q ? ('?' + q) : '');
