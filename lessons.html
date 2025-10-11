@@ -525,10 +525,6 @@
                 if (String(x[0]||'')!==String(y[0]||'')) return false;
                 if (String(x[1]||'')!==String(y[1]||'')) return false;
                 if (Boolean(x[2])!==Boolean(y[2])) return false;
-                // Сравниваем ID только если они есть
-                if (x.length >= 4 && y.length >= 4) {
-                    if (String(x[3]||'')!==String(y[3]||'')) return false;
-                }
             }
             return true;
         }
@@ -540,13 +536,9 @@
             setDisabled(saveAllBtn, !hasLessonChanges && !hasScheduleChanges);
         }
 
-        function createAddRow(name = '', color = '#2481cc', hasSub = false, lessonId = null) {
+        function createAddRow(name = '', color = '#2481cc', hasSub = false) {
             const wrap = document.createElement('div');
-            // Генерируем уникальный ID для урока, если его нет
-            if (!lessonId) {
-                lessonId = 'lesson_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            }
-            wrap.dataset.lessonId = lessonId;
+            wrap.className = 'item';
             wrap.innerHTML = `
                 <div class="row row-top">
                     <input type="text" placeholder="Название урока" value="${String(name).replaceAll('"','&quot;')}">
@@ -571,12 +563,7 @@
         }
         function renderAdd(){
             addList.innerHTML='';
-            if (lessons.length){ 
-                lessons.forEach((lesson)=> {
-                    const [n, c, s, id] = lesson.length >= 4 ? lesson : [...lesson, null];
-                    addList.appendChild(createAddRow(n, c, !!s, id));
-                });
-            }
+            if (lessons.length){ lessons.forEach(([n,c,s])=> addList.appendChild(createAddRow(n,c,!!s))); }
             else { addList.appendChild(createAddRow()); }
             // Обновляем расписание при изменении уроков
             renderScheduleLessons();
@@ -584,13 +571,7 @@
         }
         function collectAdd(){
             const rows = addList.querySelectorAll('.item'); const res=[];
-            rows.forEach(r=>{ 
-                const n=r.querySelector('input[type="text"]').value.trim(); 
-                const c=r.querySelector('input[type="color"]').value; 
-                const s=r.querySelector('input[type="checkbox"]').checked; 
-                const id = r.dataset.lessonId;
-                if(n) res.push([n,c,s,id]); 
-            });
+            rows.forEach(r=>{ const n=r.querySelector('input[type="text"]').value.trim(); const c=r.querySelector('input[type="color"]').value; const s=r.querySelector('input[type="checkbox"]').checked; if(n) res.push([n,c,s]); });
             return res;
         }
 
@@ -603,29 +584,25 @@
             const currentLessons = collectAdd();
             
             currentLessons.forEach((lesson, index) => {
-                const [name, color, hasSub, lessonId] = lesson;
+                const [name, color, hasSub] = lesson;
                 const item = document.createElement('div');
                 item.className = 'lesson-item';
                 item.style.backgroundColor = color;
                 item.textContent = name;
-                item.dataset.lessonId = lessonId;
-                item.onclick = () => selectLesson(lessonId);
+                item.onclick = () => selectLesson(index);
                 container.appendChild(item);
             });
         }
         
-        function selectLesson(lessonId) {
+        function selectLesson(index) {
             // Убираем выделение с предыдущего урока
             document.querySelectorAll('.lesson-item').forEach(item => {
                 item.classList.remove('selected');
             });
             
             // Выделяем выбранный урок
-            const selectedItem = document.querySelector(`[data-lesson-id="${lessonId}"]`);
-            if (selectedItem) {
-                selectedItem.classList.add('selected');
-                selectedLesson = lessonId;
-            }
+            document.querySelectorAll('.lesson-item')[index].classList.add('selected');
+            selectedLesson = index;
         }
         
         function renderSchedule() {
@@ -686,21 +663,10 @@
                     // Проверяем, есть ли урок в этой ячейке
                     const cellData = currentSchedule[cellId];
                     if (cellData) {
-                        const [lessonIdOrIndex, room] = cellData;
+                        const [lessonIndex, room] = cellData;
                         const currentLessons = collectAdd();
-                        
-                        // Ищем урок по ID или индексу
-                        let lesson = null;
-                        for (const l of currentLessons) {
-                            const [name, color, hasSub, id] = l;
-                            if (id === lessonIdOrIndex || currentLessons.indexOf(l) === lessonIdOrIndex) {
-                                lesson = l;
-                                break;
-                            }
-                        }
-                        
-                        if (lesson) {
-                            const [name, color] = lesson;
+                        if (currentLessons[lessonIndex]) {
+                            const [name, color] = currentLessons[lessonIndex];
                             cell.innerHTML = `<div style="font-weight: bold; font-size: 8px; margin-bottom: 1px;">${name}</div><div style="font-size: 7px; opacity: 0.8;">${room}</div>`;
                             cell.style.backgroundColor = color;
                             cell.style.color = '#fff';
@@ -718,25 +684,14 @@
         function selectCell(cellId) {
             // Если в ячейке уже есть урок, показываем опции редактирования
             if (currentSchedule[cellId]) {
-                const [lessonIdOrIndex, room] = currentSchedule[cellId];
+                const [lessonIndex, room] = currentSchedule[cellId];
                 const currentLessons = collectAdd();
-                
-                // Ищем урок по ID или индексу
-                let lesson = null;
-                for (const l of currentLessons) {
-                    const [name, color, hasSub, id] = l;
-                    if (id === lessonIdOrIndex || currentLessons.indexOf(l) === lessonIdOrIndex) {
-                        lesson = l;
-                        break;
-                    }
-                }
-                
-                if (lesson) {
-                    const [name, color, hasSub] = lesson;
+                if (currentLessons[lessonIndex]) {
+                    const [name, color, hasSub] = currentLessons[lessonIndex];
                     showNotification('Заменить урок?', `В ячейке уже есть урок "${name}" (${room}). Заменить на другой урок?`, 'question', (confirmed) => {
                         if (confirmed) {
                             // Выбираем этот урок для замены
-                            selectedLesson = lessonIdOrIndex;
+                            selectedLesson = lessonIndex;
                             showRoomModal(name, color, cellId, hasSub);
                         }
                     });
@@ -744,7 +699,7 @@
                 return;
             }
             
-            if (!selectedLesson) {
+            if (!selectedLesson && selectedLesson !== 0) {
                 showNotification('Выберите урок', 'Сначала выберите урок из списка выше', 'info');
                 return;
             }
@@ -752,22 +707,10 @@
             selectedCell = cellId;
             const [dayNum, lessonNum] = cellId.split('-').map(Number);
             const currentLessons = collectAdd();
+            const [name, color, hasSub] = currentLessons[selectedLesson];
             
-            // Ищем урок по ID
-            let lesson = null;
-            for (const l of currentLessons) {
-                const [name, color, hasSub, id] = l;
-                if (id === selectedLesson) {
-                    lesson = l;
-                    break;
-                }
-            }
-            
-            if (lesson) {
-                const [name, color, hasSub] = lesson;
-                // Всегда показываем модальное окно для ввода кабинета
-                showRoomModal(name, color, cellId, hasSub);
-            }
+            // Всегда показываем модальное окно для ввода кабинета
+            showRoomModal(name, color, cellId, hasSub);
         }
         
         function showRoomModal(lessonName, color, cellId, hasSub) {
@@ -790,8 +733,8 @@
             window.modalData = { cellId, lessonIndex: selectedLesson, hasSub };
         }
         
-        function addLessonToCell(cellId, lessonId, room) {
-            currentSchedule[cellId] = [lessonId, room];
+        function addLessonToCell(cellId, lessonIndex, room) {
+            currentSchedule[cellId] = [lessonIndex, room];
             renderSchedule();
             refreshSaveState();
         }
@@ -808,7 +751,7 @@
                 return;
             }
             
-            const { cellId, lessonIndex: lessonId, hasSub } = window.modalData;
+            const { cellId, lessonIndex, hasSub } = window.modalData;
             
             if (hasSub && subgroups > 1) {
                 // Валидация для подгрупп
@@ -832,7 +775,7 @@
                 }
             }
             
-            addLessonToCell(cellId, lessonId, room);
+            addLessonToCell(cellId, lessonIndex, room);
             closeModal();
         }
         
