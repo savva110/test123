@@ -64,7 +64,38 @@
         .lesson-item.selected { border-color: var(--tg-theme-button-color,#2481cc); background: var(--tg-theme-button-color,#2481cc); }
         
         
-        .schedule-container { overflow-x: auto; margin-bottom: 15px; }
+        .schedule-container { 
+            overflow-x: auto; 
+            margin-bottom: 15px; 
+            /* Кастомный скроллбар */
+            scrollbar-width: thin;
+            scrollbar-color: var(--tg-theme-hint-color,#374151) var(--tg-theme-secondary-bg-color,#111827);
+        }
+        
+        /* Кастомный скроллбар для WebKit браузеров */
+        .schedule-container::-webkit-scrollbar {
+            height: 8px;
+        }
+        
+        .schedule-container::-webkit-scrollbar-track {
+            background: var(--tg-theme-secondary-bg-color,#111827);
+            border-radius: 4px;
+        }
+        
+        .schedule-container::-webkit-scrollbar-thumb {
+            background: var(--tg-theme-hint-color,#374151);
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+        
+        .schedule-container::-webkit-scrollbar-thumb:hover {
+            background: var(--tg-theme-button-color,#2481cc);
+        }
+        
+        .schedule-container::-webkit-scrollbar-thumb:active {
+            background: var(--tg-theme-button-color,#2481cc);
+            opacity: 0.8;
+        }
         .schedule-table { 
             width: 100%; 
             border-collapse: collapse; 
@@ -322,7 +353,7 @@
             #save-all { width:100%; }
         }
 
-        @media (min-width:600px) {
+        @media (min-width: 760px) {
             .item { display:flex; align-items:center; gap:12px; }
             .row-top { flex:1 1 auto; margin:0; }
             .row-bottom { flex:0 0 auto; margin:0; justify-content:flex-end; gap:12px; }
