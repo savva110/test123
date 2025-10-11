@@ -17,6 +17,7 @@
         .row-top { margin-bottom:6px; }
         .row-bottom { justify-content:space-between; }
         .row input[type="text"] { flex:1; padding:8px; border:2px solid var(--tg-theme-hint-color,#374151); background:transparent; color:inherit; border-radius:8px; font-size:14px; }
+        .row input[type="url"] { flex:1; padding:8px; border:2px solid var(--tg-theme-hint-color,#374151); background:transparent; color:inherit; border-radius:8px; font-size:14px; }
         .row input[type="color"] { width:44px; height:36px; border:none; background:transparent; padding:0; }
         .row label { display:flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap; }
         .buttons { display:flex; gap:8px; margin-top:8px; }
@@ -86,6 +87,7 @@
             height: 24px;
             vertical-align: middle;
             padding: 2px;
+            min-width: 100px;
         }
         .schedule-table td:first-child {
             cursor: default;
@@ -562,6 +564,7 @@
                 if (String(x[1]||'')!==String(y[1]||'')) return false;
                 if (Boolean(x[2])!==Boolean(y[2])) return false;
                 if (String(x[3]||'')!==String(y[3]||'')) return false; // ID урока
+                if (String(x[4]||'')!==String(y[4]||'')) return false; // Ссылка на ДЗ
             }
             return true;
         }
@@ -573,12 +576,15 @@
             setDisabled(saveAllBtn, !hasLessonChanges && !hasScheduleChanges);
         }
 
-        function createAddRow(name = '', color = '#2481cc', hasSub = false, lessonId = null) {
+        function createAddRow(name = '', color = '#2481cc', hasSub = false, lessonId = null, homeworkLink = '') {
             const wrap = document.createElement('div');
             wrap.className = 'item';
             wrap.innerHTML = `
                 <div class="row row-top">
                     <input type="text" placeholder="Название урока" value="${String(name).replaceAll('"','&quot;')}">
+                </div>
+                <div class="row row-top">
+                    <input type="url" placeholder="Ссылка на домашнее задание (необязательно)" value="${String(homeworkLink).replaceAll('"','&quot;')}">
                 </div>
                 <div class="row row-bottom">
                     <div style="display:flex; align-items:center; gap:8px;">
@@ -597,9 +603,11 @@
             wrap.querySelector('.rm').onclick = () => { wrap.remove(); refreshSaveState(); };
             // подписываемся на изменения для отслеживания
             const nameInput = wrap.querySelector('input[type="text"]');
+            const homeworkInput = wrap.querySelector('input[type="url"]');
             const colorInput = wrap.querySelector('input[type="color"]');
             const cb = wrap.querySelector('input[type="checkbox"]');
             if (nameInput) nameInput.addEventListener('input', refreshSaveState);
+            if (homeworkInput) homeworkInput.addEventListener('input', refreshSaveState);
             if (colorInput) colorInput.addEventListener('input', refreshSaveState);
             if (cb) cb.addEventListener('change', refreshSaveState);
             return wrap;
@@ -608,8 +616,8 @@
             addList.innerHTML='';
             if (lessons.length){ 
                 lessons.forEach((lesson)=> {
-                    const [n,c,s,id] = lesson;
-                    addList.appendChild(createAddRow(n,c,!!s,id));
+                    const [n,c,s,id,h] = lesson;
+                    addList.appendChild(createAddRow(n,c,!!s,id,h || ''));
                 });
             }
             else { addList.appendChild(createAddRow()); }
@@ -621,10 +629,11 @@
             const rows = addList.querySelectorAll('.item'); const res=[];
             rows.forEach(r=>{ 
                 const n=r.querySelector('input[type="text"]').value.trim(); 
+                const h=r.querySelector('input[type="url"]').value.trim(); 
                 const c=r.querySelector('input[type="color"]').value; 
                 const s=r.querySelector('input[type="checkbox"]').checked; 
                 const id=r.querySelector('input[type="hidden"]').value;
-                if(n) res.push([n,c,s,id]); 
+                if(n) res.push([n,c,s,id,h]); 
             });
             return res;
         }
@@ -638,7 +647,7 @@
             const currentLessons = collectAdd();
             
             currentLessons.forEach((lesson, index) => {
-                const [name, color, hasSub, id] = lesson;
+                const [name, color, hasSub, id, homeworkLink] = lesson;
                 const item = document.createElement('div');
                 item.className = 'lesson-item';
                 item.style.backgroundColor = color;
