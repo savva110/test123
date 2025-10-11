@@ -252,6 +252,8 @@
         function collectStudents(){
             const rows = list.querySelectorAll('.item');
             const res = [];
+            const currentIds = new Set();
+            
             rows.forEach(r => {
                 const inputs = r.querySelectorAll('input[type="text"]');
                 const f = inputs[0].value.trim();
@@ -262,20 +264,31 @@
                 const hasId = r.hasAttribute('data-user-id');
                 const id = hasId ? Number(r.dataset.userId) : null;
                 const subgroup = getSelectedSubgroup(r);
+                
                 // Для новых требуется код, для существующих (id) код не обязателен
                 if (id !== null) {
+                    currentIds.add(id);
                     if (f && l) res.push({ id, first_name: f, last_name: l, leader, subgroup });
                 } else {
                     if (f && l && c) res.push({ first_name: f, last_name: l, code: c, leader, subgroup });
                 }
             });
-            return res;
+            
+            // Находим удаленных учеников (были в initialSnapshot, но нет в текущем списке)
+            const removedIds = [];
+            initialSnapshot.forEach(student => {
+                if (student.id !== null && !currentIds.has(student.id)) {
+                    removedIds.push(student.id);
+                }
+            });
+            
+            return { students: res, removedIds: removedIds };
         }
 
         document.getElementById('add-student').onclick = () => { list.appendChild(createStudentRow()); refreshSaveState(); };
         document.getElementById('save-all').onclick = () => {
-            const students = collectStudents();
-            tg.sendData(JSON.stringify({ action: 'add_students', students: students }));
+            const data = collectStudents();
+            tg.sendData(JSON.stringify({ action: 'add_students', students: data.students, removedIds: data.removedIds }));
             // После сохранения скрываем поля кода у добавленных строк
             const rows = list.querySelectorAll('.item');
             rows.forEach(r => {
@@ -296,5 +309,3 @@
     </script>
 </body>
 </html>
-
-
