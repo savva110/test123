@@ -844,9 +844,12 @@
 
         // Функция очистки расписания от скрытых дней недели
         function cleanupScheduleForHiddenDays() {
+            // Получаем исходное расписание из URL (до очистки)
+            const originalSchedule = getSchedule();
             const cleanedSchedule = {};
             
-            for (const [cellId, cellData] of Object.entries(currentSchedule)) {
+            // Очищаем исходное расписание по текущим дням недели
+            for (const [cellId, cellData] of Object.entries(originalSchedule)) {
                 const [dayNum, lessonNum] = cellId.split('-').map(Number);
                 
                 // Если день недели активен, сохраняем ячейку
@@ -855,7 +858,7 @@
                 }
             }
             
-            const removedCount = Object.keys(currentSchedule).length - Object.keys(cleanedSchedule).length;
+            const removedCount = Object.keys(originalSchedule).length - Object.keys(cleanedSchedule).length;
             if (removedCount > 0) {
                 currentSchedule = cleanedSchedule;
                 showNotification('Расписание обновлено', `Удалено ${removedCount} уроков из скрытых дней недели`, 'info');
