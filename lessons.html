@@ -153,32 +153,6 @@
             color: var(--tg-theme-button-text-color,#fff);
         }
         
-        /* Стили для кнопки удаления в расписании */
-        .lesson-delete-btn {
-            position: absolute;
-            top: 2px;
-            right: 2px;
-            width: 16px;
-            height: 16px;
-            background: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 10px;
-            cursor: pointer;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-        }
-        
-        .schedule-table td.occupied:hover .lesson-delete-btn {
-            display: flex;
-        }
-        
-        .schedule-table td.occupied {
-            position: relative;
-        }
         
         .modal { 
             display: none; 
@@ -742,7 +716,6 @@
                             cell.innerHTML = `
                                 <div style="font-weight: bold; font-size: 8px; margin-bottom: 1px;">${name}</div>
                                 <div style="font-size: 7px; opacity: 0.8;">${room}</div>
-                                <button class="lesson-delete-btn" onclick="deleteLessonFromSchedule('${cellId}')" title="Удалить урок">❌</button>
                             `;
                             cell.style.backgroundColor = color;
                             cell.style.color = '#fff';
@@ -867,29 +840,6 @@
             }
         }
         
-        // Функция для удаления урока из расписания по кнопке
-        function deleteLessonFromSchedule(cellId) {
-            // Предотвращаем всплытие события клика
-            event.stopPropagation();
-            
-            // Получаем информацию об уроке для подтверждения
-            const cellData = currentSchedule[cellId];
-            if (cellData) {
-                const [lessonId, room] = cellData;
-                const currentLessons = collectAdd();
-                const lesson = currentLessons.find(l => l[3] === lessonId);
-                if (lesson) {
-                    const [name] = lesson;
-                    showNotification('Удалить урок?', `Удалить урок "${name}" из ячейки ${cellId}?`, 'question', (confirmed) => {
-                        if (confirmed) {
-                            delete currentSchedule[cellId];
-                            renderSchedule();
-                            refreshSaveState();
-                        }
-                    });
-                }
-            }
-        }
         
         function closeModal() {
             document.getElementById('room-modal').style.display = 'none';
