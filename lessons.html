@@ -33,7 +33,15 @@
         .buttons button, #save-all, .rm, .toggle, input[type="checkbox"] { cursor: pointer; }
         
         /* Расписание */
-        .lessons-container { margin-bottom: 15px; }
+        .lessons-container { 
+            margin-bottom: 15px; 
+            position: relative;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 3px;
+            padding-right: 50px; /* Отступ для кнопки удаления */
+        }
         .lesson-item { 
             display: inline-block; 
             margin: 3px; 
@@ -43,6 +51,13 @@
             border: 2px solid transparent;
             transition: all 0.2s;
             font-size: 12px;
+        }
+        .delete-mode-btn {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            margin: 0;
         }
         .lesson-item:hover { border-color: var(--tg-theme-button-color,#2481cc); }
         .lesson-item.selected { border-color: var(--tg-theme-button-color,#2481cc); background: var(--tg-theme-button-color,#2481cc); }
@@ -174,7 +189,7 @@
         }
         .modal h3 { margin-top: 0; }
         .modal input { 
-            width: 100%; 
+            width: 94%; 
             padding: 10px; 
             margin: 10px 0; 
             border: 2px solid var(--tg-theme-hint-color,#374151); 
@@ -505,6 +520,7 @@
         let selectedLesson = null;
         let selectedCell = null;
         let currentSchedule = { ...schedule };
+        let deleteMode = false;
         
         // Названия дней недели
         const weekdayNames = ['', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -632,9 +648,35 @@
                 item.onclick = () => selectLesson(id);
                 container.appendChild(item);
             });
+            
+            // Добавляем кнопку режима удаления в статическом положении справа
+            const deleteBtn = document.createElement('div');
+            deleteBtn.className = 'lesson-item delete-mode-btn';
+            deleteBtn.id = 'delete-mode-btn';
+            deleteBtn.style.backgroundColor = '#374151';
+            deleteBtn.style.color = '#e5e7eb';
+            deleteBtn.style.border = '2px solid #374151';
+            deleteBtn.textContent = '🗑️';
+            deleteBtn.onclick = toggleDeleteMode;
+            container.appendChild(deleteBtn);
         }
         
         function selectLesson(lessonId) {
+            if (deleteMode) {
+                // В режиме удаления показываем подтверждение
+                const currentLessons = collectAdd();
+                const lesson = currentLessons.find(l => l[3] === lessonId);
+                if (lesson) {
+                    const [name] = lesson;
+                    showNotification('Удалить урок?', `Вы уверены, что хотите удалить урок "${name}" из всех ячеек расписания?`, 'question', (confirmed) => {
+                        if (confirmed) {
+                            deleteLessonFromSchedule(lessonId);
+                        }
+                    });
+                }
+                return;
+            }
+            
             // Убираем выделение с предыдущего урока
             document.querySelectorAll('.lesson-item').forEach(item => {
                 item.classList.remove('selected');
@@ -738,14 +780,33 @@
                 const lesson = currentLessons.find(l => l[3] === lessonId);
                 if (lesson) {
                     const [name, color, hasSub] = lesson;
-                    showNotification('Заменить урок?', `В ячейке уже есть урок "${name}" (${room}). Заменить на другой урок?`, 'question', (confirmed) => {
-                        if (confirmed) {
-                            // Выбираем этот урок для замены
-                            selectedLesson = lessonId;
-                            showRoomModal(name, color, cellId, hasSub);
-                        }
-                    });
+                    
+                    if (deleteMode) {
+                        // В режиме удаления предлагаем удалить урок из ячейки
+                        showNotification('Удалить урок?', `Удалить урок "${name}" (${room}) из этой ячейки?`, 'question', (confirmed) => {
+                            if (confirmed) {
+                                delete currentSchedule[cellId];
+                                renderSchedule();
+                                refreshSaveState();
+                            }
+                        });
+                    } else {
+                        // В обычном режиме предлагаем заменить урок
+                        showNotification('Заменить урок?', `В ячейке уже есть урок "${name}" (${room}). Заменить на другой урок?`, 'question', (confirmed) => {
+                            if (confirmed) {
+                                // Выбираем этот урок для замены
+                                selectedLesson = lessonId;
+                                showRoomModal(name, color, cellId, hasSub);
+                            }
+                        });
+                    }
                 }
+                return;
+            }
+            
+            if (deleteMode) {
+                // В режиме удаления для пустых ячеек ничего не делаем
+                showNotification('Пустая ячейка', 'В этой ячейке нет урока для удаления', 'info');
                 return;
             }
             
@@ -837,6 +898,43 @@
                 renderSchedule();
                 refreshSaveState();
                 closeModal();
+            }
+        }
+        
+        function deleteLessonFromSchedule(lessonId) {
+            let deletedCount = 0;
+            for (const [cellId, cellData] of Object.entries(currentSchedule)) {
+                if (cellData[0] === lessonId) {
+                    delete currentSchedule[cellId];
+                    deletedCount++;
+                }
+            }
+            
+            if (deletedCount > 0) {
+                renderSchedule();
+                refreshSaveState();
+            } else {
+                showNotification('Урок не найден', 'Этот урок не используется в расписании', 'info');
+            }
+        }
+        
+        function toggleDeleteMode() {
+            deleteMode = !deleteMode;
+            const btn = document.getElementById('delete-mode-btn');
+            
+            if (!btn) return; // Проверяем, что кнопка существует
+            
+            if (deleteMode) {
+                btn.style.backgroundColor = '#ef4444';
+                btn.style.color = '#fff';
+                btn.style.borderColor = '#ef4444';
+                btn.textContent = '✅';
+                showNotification('Режим удаления', 'Нажмите на урок, чтобы удалить его из расписания', 'info');
+            } else {
+                btn.style.backgroundColor = '#374151';
+                btn.style.color = '#e5e7eb';
+                btn.style.borderColor = '#374151';
+                btn.textContent = '🗑️';
             }
         }
         
