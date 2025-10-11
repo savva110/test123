@@ -471,9 +471,24 @@
         function getWeekdays() { try { return JSON.parse(urlParams.get('weekdays')||'[1,2,3,4,5]'); } catch { return [1,2,3,4,5]; } }
         function getSubgroups() { try { return parseInt(urlParams.get('subgroups')||'1'); } catch { return 1; } }
         
-        // Функция генерации уникального ID урока
+        // Функция генерации уникального числового ID урока
         function generateLessonId() {
-            return 'lesson_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const currentLessons = collectAdd();
+            const existingIds = currentLessons.map(lesson => parseInt(lesson[3]) || 0).filter(id => id > 0);
+            
+            if (existingIds.length === 0) {
+                return 1; // Первый урок получает ID 1
+            }
+            
+            // Находим первое положительное число, которого нет в списке
+            const maxId = Math.max(...existingIds);
+            for (let i = 1; i <= maxId + 1; i++) {
+                if (!existingIds.includes(i)) {
+                    return i;
+                }
+            }
+            
+            return maxId + 1; // Если все числа заняты, берем следующее
         }
         
         let lessons = getLessons();
@@ -827,10 +842,33 @@
             window.modalData = null;
         }
 
+        // Функция очистки расписания от скрытых дней недели
+        function cleanupScheduleForHiddenDays() {
+            const cleanedSchedule = {};
+            
+            for (const [cellId, cellData] of Object.entries(currentSchedule)) {
+                const [dayNum, lessonNum] = cellId.split('-').map(Number);
+                
+                // Если день недели активен, сохраняем ячейку
+                if (weekdays.includes(dayNum)) {
+                    cleanedSchedule[cellId] = cellData;
+                }
+            }
+            
+            const removedCount = Object.keys(currentSchedule).length - Object.keys(cleanedSchedule).length;
+            if (removedCount > 0) {
+                currentSchedule = cleanedSchedule;
+                showNotification('Расписание обновлено', `Удалено ${removedCount} уроков из скрытых дней недели`, 'info');
+                renderSchedule();
+                refreshSaveState();
+            }
+        }
+
         // Инициализация расписания
         function initSchedule() {
             renderScheduleLessons();
             renderSchedule();
+            cleanupScheduleForHiddenDays();
         }
 
         document.getElementById('add-row').onclick = () => { addList.appendChild(createAddRow()); refreshSaveState(); };
