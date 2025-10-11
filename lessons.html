@@ -153,32 +153,31 @@
             color: var(--tg-theme-button-text-color,#fff);
         }
         
-        /* Стили для кнопки удаления в контейнере уроков */
+        /* Стили для кнопки удаления в расписании */
         .lesson-delete-btn {
-            width: 20px;
-            height: 20px;
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            width: 16px;
+            height: 16px;
             background: #ef4444;
             color: white;
             border: none;
             border-radius: 50%;
-            font-size: 12px;
+            font-size: 10px;
             cursor: pointer;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
-            margin-left: 6px;
-            transition: all 0.2s;
+            z-index: 10;
         }
         
-        .lesson-delete-btn:hover {
-            background: #dc2626;
-            transform: scale(1.1);
-        }
-        
-        .lesson-item {
+        .schedule-table td.occupied:hover .lesson-delete-btn {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+        }
+        
+        .schedule-table td.occupied {
+            position: relative;
         }
         
         .modal { 
@@ -654,32 +653,9 @@
                 const item = document.createElement('div');
                 item.className = 'lesson-item';
                 item.style.backgroundColor = color;
+                item.textContent = name;
                 item.dataset.lessonId = id;
                 item.onclick = () => selectLesson(id);
-                
-                // Создаем контейнер для названия урока и кнопки удаления
-                const content = document.createElement('div');
-                content.style.display = 'flex';
-                content.style.alignItems = 'center';
-                content.style.justifyContent = 'space-between';
-                content.style.width = '100%';
-                
-                const nameSpan = document.createElement('span');
-                nameSpan.textContent = name;
-                
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'lesson-delete-btn';
-                deleteBtn.innerHTML = '❌';
-                deleteBtn.title = 'Удалить урок из расписания';
-                deleteBtn.onclick = (e) => {
-                    e.stopPropagation(); // Предотвращаем выбор урока
-                    deleteLessonFromScheduleById(id);
-                };
-                
-                content.appendChild(nameSpan);
-                content.appendChild(deleteBtn);
-                item.appendChild(content);
-                
                 container.appendChild(item);
             });
         }
@@ -766,6 +742,7 @@
                             cell.innerHTML = `
                                 <div style="font-weight: bold; font-size: 8px; margin-bottom: 1px;">${name}</div>
                                 <div style="font-size: 7px; opacity: 0.8;">${room}</div>
+                                <button class="lesson-delete-btn" onclick="deleteLessonFromSchedule('${cellId}')" title="Удалить урок">❌</button>
                             `;
                             cell.style.backgroundColor = color;
                             cell.style.color = '#fff';
@@ -912,40 +889,6 @@
                     });
                 }
             }
-        }
-        
-        // Функция для удаления урока из расписания по ID урока
-        function deleteLessonFromScheduleById(lessonId) {
-            // Получаем информацию об уроке для подтверждения
-            const currentLessons = collectAdd();
-            const lesson = currentLessons.find(l => l[3] === lessonId);
-            if (!lesson) return;
-            
-            const [name] = lesson;
-            
-            // Находим все ячейки с этим уроком
-            const cellsWithLesson = [];
-            for (const [cellId, cellData] of Object.entries(currentSchedule)) {
-                if (cellData && cellData[0] === lessonId) {
-                    cellsWithLesson.push(cellId);
-                }
-            }
-            
-            if (cellsWithLesson.length === 0) {
-                showNotification('Урок не найден', 'Этот урок не используется в расписании', 'info');
-                return;
-            }
-            
-            showNotification('Удалить урок?', `Удалить урок "${name}" из ${cellsWithLesson.length} ячеек расписания?`, 'question', (confirmed) => {
-                if (confirmed) {
-                    // Удаляем все ячейки с этим уроком
-                    cellsWithLesson.forEach(cellId => {
-                        delete currentSchedule[cellId];
-                    });
-                    renderSchedule();
-                    refreshSaveState();
-                }
-            });
         }
         
         function closeModal() {
