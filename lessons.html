@@ -471,6 +471,11 @@
         function getWeekdays() { try { return JSON.parse(urlParams.get('weekdays')||'[1,2,3,4,5]'); } catch { return [1,2,3,4,5]; } }
         function getSubgroups() { try { return parseInt(urlParams.get('subgroups')||'1'); } catch { return 1; } }
         
+        // Функция генерации уникального ID урока
+        function generateLessonId() {
+            return 'lesson_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+        
         let lessons = getLessons();
         let schedule = getSchedule();
         let weekdays = getWeekdays();
@@ -525,6 +530,7 @@
                 if (String(x[0]||'')!==String(y[0]||'')) return false;
                 if (String(x[1]||'')!==String(y[1]||'')) return false;
                 if (Boolean(x[2])!==Boolean(y[2])) return false;
+                if (String(x[3]||'')!==String(y[3]||'')) return false; // ID урока
             }
             return true;
         }
@@ -536,7 +542,7 @@
             setDisabled(saveAllBtn, !hasLessonChanges && !hasScheduleChanges);
         }
 
-        function createAddRow(name = '', color = '#2481cc', hasSub = false) {
+        function createAddRow(name = '', color = '#2481cc', hasSub = false, lessonId = null) {
             const wrap = document.createElement('div');
             wrap.className = 'item';
             wrap.innerHTML = `
@@ -551,6 +557,12 @@
                     <button class="rm">Удалить</button>
                 </div>
             `;
+            // Добавляем скрытое поле для ID урока
+            const hiddenId = document.createElement('input');
+            hiddenId.type = 'hidden';
+            hiddenId.value = lessonId || generateLessonId();
+            wrap.appendChild(hiddenId);
+            
             wrap.querySelector('.rm').onclick = () => { wrap.remove(); refreshSaveState(); };
             // подписываемся на изменения для отслеживания
             const nameInput = wrap.querySelector('input[type="text"]');
@@ -563,7 +575,12 @@
         }
         function renderAdd(){
             addList.innerHTML='';
-            if (lessons.length){ lessons.forEach(([n,c,s])=> addList.appendChild(createAddRow(n,c,!!s))); }
+            if (lessons.length){ 
+                lessons.forEach((lesson)=> {
+                    const [n,c,s,id] = lesson;
+                    addList.appendChild(createAddRow(n,c,!!s,id));
+                });
+            }
             else { addList.appendChild(createAddRow()); }
             // Обновляем расписание при изменении уроков
             renderScheduleLessons();
@@ -571,7 +588,13 @@
         }
         function collectAdd(){
             const rows = addList.querySelectorAll('.item'); const res=[];
-            rows.forEach(r=>{ const n=r.querySelector('input[type="text"]').value.trim(); const c=r.querySelector('input[type="color"]').value; const s=r.querySelector('input[type="checkbox"]').checked; if(n) res.push([n,c,s]); });
+            rows.forEach(r=>{ 
+                const n=r.querySelector('input[type="text"]').value.trim(); 
+                const c=r.querySelector('input[type="color"]').value; 
+                const s=r.querySelector('input[type="checkbox"]').checked; 
+                const id=r.querySelector('input[type="hidden"]').value;
+                if(n) res.push([n,c,s,id]); 
+            });
             return res;
         }
 
@@ -584,25 +607,29 @@
             const currentLessons = collectAdd();
             
             currentLessons.forEach((lesson, index) => {
-                const [name, color, hasSub] = lesson;
+                const [name, color, hasSub, id] = lesson;
                 const item = document.createElement('div');
                 item.className = 'lesson-item';
                 item.style.backgroundColor = color;
                 item.textContent = name;
-                item.onclick = () => selectLesson(index);
+                item.dataset.lessonId = id;
+                item.onclick = () => selectLesson(id);
                 container.appendChild(item);
             });
         }
         
-        function selectLesson(index) {
+        function selectLesson(lessonId) {
             // Убираем выделение с предыдущего урока
             document.querySelectorAll('.lesson-item').forEach(item => {
                 item.classList.remove('selected');
             });
             
             // Выделяем выбранный урок
-            document.querySelectorAll('.lesson-item')[index].classList.add('selected');
-            selectedLesson = index;
+            const lessonItem = document.querySelector(`[data-lesson-id="${lessonId}"]`);
+            if (lessonItem) {
+                lessonItem.classList.add('selected');
+                selectedLesson = lessonId;
+            }
         }
         
         function renderSchedule() {
@@ -613,12 +640,13 @@
             // Очищаем заголовки
             thead.innerHTML = '<th>Урок</th><th>Начало</th><th>Конец</th>';
             
-            // Добавляем дни недели
-            weekdays.forEach(dayNum => {
+            // Добавляем дни недели (всегда все 7 дней, но показываем только выбранные)
+            for (let dayNum = 1; dayNum <= 7; dayNum++) {
                 const th = document.createElement('th');
                 th.textContent = weekdayNames[dayNum];
+                th.style.display = weekdays.includes(dayNum) ? 'table-cell' : 'none';
                 thead.appendChild(th);
-            });
+            }
             
             // Очищаем тело таблицы
             tbody.innerHTML = '';
@@ -653,20 +681,22 @@
                 endTimeCell.appendChild(endTimeInput);
                 row.appendChild(endTimeCell);
                 
-                // Ячейки для каждого дня
-                weekdays.forEach(dayNum => {
+                // Ячейки для каждого дня недели (всегда все 7 дней)
+                for (let dayNum = 1; dayNum <= 7; dayNum++) {
                     const cell = document.createElement('td');
                     const cellId = `${dayNum}-${lessonNum}`;
                     cell.id = cellId;
+                    cell.style.display = weekdays.includes(dayNum) ? 'table-cell' : 'none';
                     cell.onclick = () => selectCell(cellId);
                     
                     // Проверяем, есть ли урок в этой ячейке
                     const cellData = currentSchedule[cellId];
                     if (cellData) {
-                        const [lessonIndex, room] = cellData;
+                        const [lessonId, room] = cellData;
                         const currentLessons = collectAdd();
-                        if (currentLessons[lessonIndex]) {
-                            const [name, color] = currentLessons[lessonIndex];
+                        const lesson = currentLessons.find(l => l[3] === lessonId);
+                        if (lesson) {
+                            const [name, color] = lesson;
                             cell.innerHTML = `<div style="font-weight: bold; font-size: 8px; margin-bottom: 1px;">${name}</div><div style="font-size: 7px; opacity: 0.8;">${room}</div>`;
                             cell.style.backgroundColor = color;
                             cell.style.color = '#fff';
@@ -675,7 +705,7 @@
                     }
                     
                     row.appendChild(cell);
-                });
+                }
                 
                 tbody.appendChild(row);
             }
@@ -684,14 +714,15 @@
         function selectCell(cellId) {
             // Если в ячейке уже есть урок, показываем опции редактирования
             if (currentSchedule[cellId]) {
-                const [lessonIndex, room] = currentSchedule[cellId];
+                const [lessonId, room] = currentSchedule[cellId];
                 const currentLessons = collectAdd();
-                if (currentLessons[lessonIndex]) {
-                    const [name, color, hasSub] = currentLessons[lessonIndex];
+                const lesson = currentLessons.find(l => l[3] === lessonId);
+                if (lesson) {
+                    const [name, color, hasSub] = lesson;
                     showNotification('Заменить урок?', `В ячейке уже есть урок "${name}" (${room}). Заменить на другой урок?`, 'question', (confirmed) => {
                         if (confirmed) {
                             // Выбираем этот урок для замены
-                            selectedLesson = lessonIndex;
+                            selectedLesson = lessonId;
                             showRoomModal(name, color, cellId, hasSub);
                         }
                     });
@@ -699,7 +730,7 @@
                 return;
             }
             
-            if (!selectedLesson && selectedLesson !== 0) {
+            if (!selectedLesson) {
                 showNotification('Выберите урок', 'Сначала выберите урок из списка выше', 'info');
                 return;
             }
@@ -707,10 +738,12 @@
             selectedCell = cellId;
             const [dayNum, lessonNum] = cellId.split('-').map(Number);
             const currentLessons = collectAdd();
-            const [name, color, hasSub] = currentLessons[selectedLesson];
-            
-            // Всегда показываем модальное окно для ввода кабинета
-            showRoomModal(name, color, cellId, hasSub);
+            const lesson = currentLessons.find(l => l[3] === selectedLesson);
+            if (lesson) {
+                const [name, color, hasSub] = lesson;
+                // Всегда показываем модальное окно для ввода кабинета
+                showRoomModal(name, color, cellId, hasSub);
+            }
         }
         
         function showRoomModal(lessonName, color, cellId, hasSub) {
@@ -730,11 +763,11 @@
             modal.style.display = 'block';
             
             // Сохраняем данные для модального окна
-            window.modalData = { cellId, lessonIndex: selectedLesson, hasSub };
+            window.modalData = { cellId, lessonId: selectedLesson, hasSub };
         }
         
-        function addLessonToCell(cellId, lessonIndex, room) {
-            currentSchedule[cellId] = [lessonIndex, room];
+        function addLessonToCell(cellId, lessonId, room) {
+            currentSchedule[cellId] = [lessonId, room];
             renderSchedule();
             refreshSaveState();
         }
@@ -751,7 +784,7 @@
                 return;
             }
             
-            const { cellId, lessonIndex, hasSub } = window.modalData;
+            const { cellId, lessonId, hasSub } = window.modalData;
             
             if (hasSub && subgroups > 1) {
                 // Валидация для подгрупп
@@ -775,7 +808,7 @@
                 }
             }
             
-            addLessonToCell(cellId, lessonIndex, room);
+            addLessonToCell(cellId, lessonId, room);
             closeModal();
         }
         
@@ -812,10 +845,13 @@
             lessons = lessonsToSave;
             schedule = { ...currentSchedule };
             while (addList.firstChild) addList.removeChild(addList.firstChild);
-            lessons.forEach(([n,c,s])=> addList.appendChild(createAddRow(n,c,!!s)));
+            lessons.forEach((lesson)=> {
+                const [n,c,s,id] = lesson;
+                addList.appendChild(createAddRow(n,c,!!s,id));
+            });
             // обновим initial и кнопку
             while (initialLessons.length) initialLessons.pop();
-            lessons.forEach(x=> initialLessons.push([x[0], x[1], !!x[2]]));
+            lessons.forEach(x=> initialLessons.push([x[0], x[1], !!x[2], x[3]]));
             refreshSaveState();
         };
         // удаление происходит на месте (кнопкой у элемента). Отправляем только общий список через add-submit
