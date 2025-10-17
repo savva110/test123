@@ -411,6 +411,12 @@
         <div class="modal-content">
             <h3 id="modal-title">Добавить урок</h3>
             <input type="text" id="room-input" placeholder="Номер кабинета">
+            <div id="teacher-selection" style="margin: 10px 0;">
+                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Учитель (необязательно):</label>
+                <select id="teacher-select" style="width: 100%; padding: 8px; border: 2px solid var(--tg-theme-hint-color,#374151); background: transparent; color: inherit; border-radius: 8px; font-size: 14px;">
+                    <option value="">Без учителя</option>
+                </select>
+            </div>
             <div class="modal-buttons">
                 <button class="cancel" onclick="closeModal()">Отмена</button>
                 <button class="save" onclick="saveLesson()">Сохранить</button>
@@ -518,6 +524,7 @@
         function getSchedule() { try { return JSON.parse(urlParams.get('schedule')||'{}'); } catch { return {}; } }
         function getWeekdays() { try { return JSON.parse(urlParams.get('weekdays')||'[1,2,3,4,5]'); } catch { return [1,2,3,4,5]; } }
         function getSubgroups() { try { return parseInt(urlParams.get('subgroups')||'1'); } catch { return 1; } }
+        function getTeachers() { try { return JSON.parse(urlParams.get('teachers')||'[]'); } catch { return []; } }
         
         // Функция генерации уникального числового ID урока
         function generateLessonId() {
@@ -543,6 +550,7 @@
         let schedule = getSchedule();
         let weekdays = getWeekdays();
         let subgroups = getSubgroups();
+        let teachers = getTeachers();
         
 
         const addList = document.getElementById('add-list');
@@ -789,14 +797,26 @@
                     // Проверяем, есть ли урок в этой ячейке
                     const cellData = currentSchedule[cellId];
                     if (cellData) {
-                        const [lessonId, room] = cellData;
+                        const [lessonId, room, teacherId] = cellData;
                         const currentLessons = collectAdd();
                         const lesson = currentLessons.find(l => l[3] === lessonId);
                         if (lesson) {
                             const [name, color] = lesson;
+                            
+                            // Находим учителя
+                            let teacherName = '';
+                            if (teacherId) {
+                                const teacher = teachers.find(t => t[5] === teacherId);
+                                if (teacher) {
+                                    const [lastName, firstName, middleName] = teacher;
+                                    teacherName = `${lastName} ${firstName} ${middleName}`.trim();
+                                }
+                            }
+                            
                             cell.innerHTML = `
                                 <div style="font-weight: bold; font-size: 8px; margin-bottom: 1px;">${name}</div>
                                 <div style="font-size: 7px; opacity: 0.8;">${room}</div>
+                                ${teacherName ? `<div style="font-size: 6px; opacity: 0.7; margin-top: 1px;">${teacherName}</div>` : ''}
                             `;
                             cell.style.backgroundColor = color;
                             cell.style.color = '#fff';
@@ -814,15 +834,25 @@
         function selectCell(cellId) {
             // Если в ячейке уже есть урок, показываем опции редактирования
             if (currentSchedule[cellId]) {
-                const [lessonId, room] = currentSchedule[cellId];
+                const [lessonId, room, teacherId] = currentSchedule[cellId];
                 const currentLessons = collectAdd();
                 const lesson = currentLessons.find(l => l[3] === lessonId);
                 if (lesson) {
                     const [name, color, hasSub] = lesson;
                     
+                    // Находим имя учителя
+                    let teacherName = '';
+                    if (teacherId) {
+                        const teacher = teachers.find(t => t[5] === teacherId);
+                        if (teacher) {
+                            const [lastName, firstName, middleName] = teacher;
+                            teacherName = ` (${lastName} ${firstName} ${middleName}`.trim() + ')';
+                        }
+                    }
+                    
                     if (deleteMode) {
                         // В режиме удаления предлагаем удалить урок из ячейки
-                        showNotification('Удалить урок?', `Удалить урок "${name}" (${room}) из этой ячейки?`, 'question', (confirmed) => {
+                        showNotification('Удалить урок?', `Удалить урок "${name}" (${room})${teacherName} из этой ячейки?`, 'question', (confirmed) => {
                             if (confirmed) {
                                 delete currentSchedule[cellId];
                                 renderSchedule();
@@ -831,7 +861,7 @@
                         });
                     } else {
                         // В обычном режиме предлагаем заменить урок
-                        showNotification('Заменить урок?', `В ячейке уже есть урок "${name}" (${room}). Заменить на другой урок?`, 'question', (confirmed) => {
+                        showNotification('Заменить урок?', `В ячейке уже есть урок "${name}" (${room})${teacherName}. Заменить на другой урок?`, 'question', (confirmed) => {
                             if (confirmed) {
                                 // Выбираем этот урок для замены
                                 selectedLesson = lessonId;
@@ -869,6 +899,7 @@
             const modal = document.getElementById('room-modal');
             const title = document.getElementById('modal-title');
             const input = document.getElementById('room-input');
+            const teacherSelect = document.getElementById('teacher-select');
             
             if (hasSub && subgroups > 1) {
                 title.textContent = `${lessonName} - Подгруппы`;
@@ -879,21 +910,43 @@
             }
             input.value = '';
             
+            // Заполняем список учителей
+            teacherSelect.innerHTML = '<option value="">Без учителя</option>';
+            teachers.forEach(teacher => {
+                const [lastName, firstName, middleName, email, phone, teacherId, additionalInfo] = teacher;
+                const fullName = `${lastName} ${firstName} ${middleName}`.trim();
+                const option = document.createElement('option');
+                option.value = teacherId;
+                option.textContent = fullName;
+                teacherSelect.appendChild(option);
+            });
+            
+            // Проверяем, есть ли уже учитель в этой ячейке
+            const cellData = currentSchedule[cellId];
+            if (cellData && cellData.length >= 3) {
+                const [, , teacherId] = cellData;
+                teacherSelect.value = teacherId || '';
+            } else {
+                teacherSelect.value = '';
+            }
+            
             modal.style.display = 'block';
             
             // Сохраняем данные для модального окна
             window.modalData = { cellId, lessonId: selectedLesson, hasSub };
         }
         
-        function addLessonToCell(cellId, lessonId, room) {
-            currentSchedule[cellId] = [lessonId, room];
+        function addLessonToCell(cellId, lessonId, room, teacherId = null) {
+            currentSchedule[cellId] = [lessonId, room, teacherId];
             renderSchedule();
             refreshSaveState();
         }
         
         function saveLesson() {
             const input = document.getElementById('room-input');
+            const teacherSelect = document.getElementById('teacher-select');
             const room = input.value.trim();
+            const teacherId = teacherSelect.value || null;
             
             if (!window.modalData) return;
             
@@ -927,7 +980,7 @@
                 }
             }
             
-            addLessonToCell(cellId, lessonId, room);
+            addLessonToCell(cellId, lessonId, room, teacherId);
             closeModal();
         }
         
