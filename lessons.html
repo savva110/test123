@@ -615,7 +615,19 @@
                 if (String(x[1]||'')!==String(y[1]||'')) return false;
                 if (Boolean(x[2])!==Boolean(y[2])) return false;
                 if (String(x[3]||'')!==String(y[3]||'')) return false; // ID урока
-                if (String(x[4]||'')!==String(y[4]||'')) return false; // Ссылка на ДЗ
+                
+                // Сравниваем ссылки на домашнее задание
+                const xLinks = x[4] || [];
+                const yLinks = y[4] || [];
+                
+                // Преобразуем в массивы если нужно
+                const xLinksArray = Array.isArray(xLinks) ? xLinks : [xLinks];
+                const yLinksArray = Array.isArray(yLinks) ? yLinks : [yLinks];
+                
+                if (xLinksArray.length !== yLinksArray.length) return false;
+                for (let j = 0; j < xLinksArray.length; j++) {
+                    if (String(xLinksArray[j] || '') !== String(yLinksArray[j] || '')) return false;
+                }
             }
             return true;
         }
@@ -627,16 +639,37 @@
             setDisabled(saveAllBtn, !hasLessonChanges && !hasScheduleChanges);
         }
 
-        function createAddRow(name = '', color = '#2481cc', hasSub = false, lessonId = null, homeworkLink = '') {
+        function createAddRow(name = '', color = '#2481cc', hasSub = false, lessonId = null, homeworkLinks = []) {
             const wrap = document.createElement('div');
             wrap.className = 'item';
+            
+            // Создаем поля для ссылок на домашнее задание
+            let homeworkFields = '';
+            if (hasSub && subgroups > 1) {
+                // Для подгрупп создаем отдельные поля
+                for (let i = 0; i < subgroups; i++) {
+                    const link = homeworkLinks[i] || '';
+                    homeworkFields += `
+                        <div class="row row-top">
+                            <input type="url" placeholder="Ссылка на ДЗ для подгруппы ${i + 1} (необязательно)" value="${String(link).replaceAll('"','&quot;')}" data-subgroup="${i}">
+                        </div>
+                    `;
+                }
+            } else {
+                // Для обычного урока одно поле
+                const link = Array.isArray(homeworkLinks) ? homeworkLinks[0] || '' : homeworkLinks || '';
+                homeworkFields = `
+                    <div class="row row-top">
+                        <input type="url" placeholder="Ссылка на домашнее задание (необязательно)" value="${String(link).replaceAll('"','&quot;')}">
+                    </div>
+                `;
+            }
+            
             wrap.innerHTML = `
                 <div class="row row-top">
                     <input type="text" placeholder="Название урока" value="${String(name).replaceAll('"','&quot;')}">
                 </div>
-                <div class="row row-top">
-                    <input type="url" placeholder="Ссылка на домашнее задание (необязательно)" value="${String(homeworkLink).replaceAll('"','&quot;')}">
-                </div>
+                ${homeworkFields}
                 <div class="row row-bottom">
                     <div style="display:flex; align-items:center; gap:8px;">
                         <input type="color" value="${/^#([0-9a-fA-F]{6})$/.test(String(color))?color:'#2481cc'}">
@@ -652,23 +685,104 @@
             wrap.appendChild(hiddenId);
             
             wrap.querySelector('.rm').onclick = () => { wrap.remove(); refreshSaveState(); };
+            
+            // Обработчик для чекбокса подгрупп
+            const cb = wrap.querySelector('input[type="checkbox"]');
+            if (cb) {
+                cb.addEventListener('change', () => {
+                    updateHomeworkFields(wrap);
+                    refreshSaveState();
+                });
+            }
+            
             // подписываемся на изменения для отслеживания
             const nameInput = wrap.querySelector('input[type="text"]');
-            const homeworkInput = wrap.querySelector('input[type="url"]');
             const colorInput = wrap.querySelector('input[type="color"]');
-            const cb = wrap.querySelector('input[type="checkbox"]');
             if (nameInput) nameInput.addEventListener('input', refreshSaveState);
-            if (homeworkInput) homeworkInput.addEventListener('input', refreshSaveState);
             if (colorInput) colorInput.addEventListener('input', refreshSaveState);
-            if (cb) cb.addEventListener('change', refreshSaveState);
+            
+            // Подписываемся на изменения всех полей домашнего задания
+            const homeworkInputs = wrap.querySelectorAll('input[type="url"]');
+            homeworkInputs.forEach(input => {
+                input.addEventListener('input', refreshSaveState);
+            });
             return wrap;
         }
+        
+        // Функция для обновления полей домашнего задания при изменении состояния подгрупп
+        function updateHomeworkFields(wrap) {
+            const cb = wrap.querySelector('input[type="checkbox"]');
+            const hasSub = cb ? cb.checked : false;
+            
+            // Сохраняем текущие значения ссылок
+            const currentLinks = [];
+            const homeworkInputs = wrap.querySelectorAll('input[type="url"]');
+            homeworkInputs.forEach(input => {
+                currentLinks.push(input.value.trim());
+            });
+            
+            // Находим контейнер для полей домашнего задания
+            const nameRow = wrap.querySelector('.row.row-top');
+            const homeworkContainer = nameRow.nextElementSibling;
+            
+            // Удаляем старые поля домашнего задания
+            let currentRow = homeworkContainer;
+            while (currentRow && currentRow.querySelector('input[type="url"]')) {
+                const nextRow = currentRow.nextElementSibling;
+                if (nextRow && nextRow.querySelector('input[type="url"]')) {
+                    currentRow.remove();
+                    currentRow = nextRow;
+                } else {
+                    currentRow.remove();
+                    break;
+                }
+            }
+            
+            // Создаем новые поля
+            let homeworkFields = '';
+            if (hasSub && subgroups > 1) {
+                // Для подгрупп создаем отдельные поля
+                for (let i = 0; i < subgroups; i++) {
+                    const link = currentLinks[i] || '';
+                    homeworkFields += `
+                        <div class="row row-top">
+                            <input type="url" placeholder="Ссылка на ДЗ для подгруппы ${i + 1} (необязательно)" value="${String(link).replaceAll('"','&quot;')}" data-subgroup="${i}">
+                        </div>
+                    `;
+                }
+            } else {
+                // Для обычного урока одно поле
+                const link = currentLinks[0] || '';
+                homeworkFields = `
+                    <div class="row row-top">
+                        <input type="url" placeholder="Ссылка на домашнее задание (необязательно)" value="${String(link).replaceAll('"','&quot;')}">
+                    </div>
+                `;
+            }
+            
+            // Вставляем новые поля после поля названия
+            nameRow.insertAdjacentHTML('afterend', homeworkFields);
+            
+            // Подписываемся на изменения новых полей
+            const newHomeworkInputs = wrap.querySelectorAll('input[type="url"]');
+            newHomeworkInputs.forEach(input => {
+                input.addEventListener('input', refreshSaveState);
+            });
+        }
+        
         function renderAdd(){
             addList.innerHTML='';
             if (lessons.length){ 
                 lessons.forEach((lesson)=> {
                     const [n,c,s,id,h] = lesson;
-                    addList.appendChild(createAddRow(n,c,!!s,id,h || ''));
+                    // Преобразуем старый формат в новый
+                    let homeworkLinks = [];
+                    if (Array.isArray(h)) {
+                        homeworkLinks = h;
+                    } else if (typeof h === 'string' && h) {
+                        homeworkLinks = [h];
+                    }
+                    addList.appendChild(createAddRow(n,c,!!s,id,homeworkLinks));
                 });
             }
             else { addList.appendChild(createAddRow()); }
@@ -680,11 +794,27 @@
             const rows = addList.querySelectorAll('.item'); const res=[];
             rows.forEach(r=>{ 
                 const n=r.querySelector('input[type="text"]').value.trim(); 
-                const h=r.querySelector('input[type="url"]').value.trim(); 
                 const c=r.querySelector('input[type="color"]').value; 
                 const s=r.querySelector('input[type="checkbox"]').checked; 
                 const id=r.querySelector('input[type="hidden"]').value;
-                if(n) res.push([n,c,s,id,h]); 
+                
+                // Собираем ссылки на домашнее задание
+                const homeworkInputs = r.querySelectorAll('input[type="url"]');
+                const homeworkLinks = [];
+                
+                if (s && subgroups > 1) {
+                    // Для подгрупп собираем ссылки по порядку
+                    for (let i = 0; i < subgroups; i++) {
+                        const input = r.querySelector(`input[type="url"][data-subgroup="${i}"]`);
+                        homeworkLinks.push(input ? input.value.trim() : '');
+                    }
+                } else {
+                    // Для обычного урока берем первую ссылку
+                    const firstInput = homeworkInputs[0];
+                    homeworkLinks.push(firstInput ? firstInput.value.trim() : '');
+                }
+                
+                if(n) res.push([n,c,s,id,homeworkLinks]); 
             });
             return res;
         }
@@ -698,7 +828,7 @@
             const currentLessons = collectAdd();
             
             currentLessons.forEach((lesson, index) => {
-                const [name, color, hasSub, id, homeworkLink] = lesson;
+                const [name, color, hasSub, id, homeworkLinks] = lesson;
                 const item = document.createElement('div');
                 item.className = 'lesson-item';
                 item.style.backgroundColor = color;
