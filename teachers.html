@@ -13,13 +13,33 @@
         .main { flex:1 1 auto; overflow:auto; padding-bottom:80px; }
         .footer { position:fixed; bottom:0; left:0; right:0; background:var(--tg-theme-bg-color,#0f1720); padding:10px; box-shadow:0 -4px 10px rgba(0,0,0,0.3); z-index:10; }
         .section { background:var(--tg-theme-secondary-bg-color,#111827); border-radius:12px; padding:10px; border-left:4px solid var(--tg-theme-button-color,#2481cc); margin-bottom:10px; }
-        .row { display:flex; gap:8px; align-items:center; }
+        .row {
+            display: flex;
+            flex-wrap: wrap; /* ✅ разрешаем перенос */
+            gap: 8px;
+            align-items: center;
+        }
         .row-top { margin-bottom:6px; }
         .row-bottom { justify-content:space-between; }
-        .row input[type="text"] { flex:1; padding:8px; border:2px solid var(--tg-theme-hint-color,#374151); background:transparent; color:inherit; border-radius:8px; font-size:14px; }
-        .row input[type="email"] { flex:1; padding:8px; border:2px solid var(--tg-theme-hint-color,#374151); background:transparent; color:inherit; border-radius:8px; font-size:14px; }
-        .row input[type="tel"] { flex:1; padding:8px; border:2px solid var(--tg-theme-hint-color,#374151); background:transparent; color:inherit; border-radius:8px; font-size:14px; }
-        .row textarea { flex:1; padding:8px; border:2px solid var(--tg-theme-hint-color,#374151); background:transparent; color:inherit; border-radius:8px; font-size:14px; resize:vertical; min-height:60px; font-family:inherit; }
+        .row input[type="text"],
+        .row input[type="email"],
+        .row input[type="tel"],
+        .row textarea {
+            flex: 1 1 220px; /* ✅ элемент тянется, но не меньше 220px */
+            padding: 8px;
+            border: 2px solid var(--tg-theme-hint-color,#374151);
+            background: transparent;
+            color: inherit;
+            border-radius: 8px;
+            font-size: 14px;
+            min-width: 150px;
+            box-sizing: border-box;
+        }
+        .row textarea {
+            resize: vertical;
+            min-height: 60px;
+            font-family: inherit;
+        }
         .buttons { display:flex; gap:8px; margin-top:8px; }
         .buttons a, .buttons button, #save-all { display:block; width:100%; text-decoration:none; text-align:center; background:var(--tg-theme-button-color,#2481cc); color:var(--tg-theme-button-text-color,#fff); padding:12px; border-radius:12px; border:none; font-size:14px; }
         .ghost { background:transparent; color:var(--tg-theme-button-color,#93c5fd); border:1px solid var(--tg-theme-button-color,#2481cc); }
@@ -31,6 +51,13 @@
         /* Pointer cursor on interactive elements */
         .buttons button, #save-all, .rm { cursor: pointer; }
         
+        select.subgroup option { 
+            padding-top: 6px; 
+            padding-bottom: 4px; 
+            background: var(--tg-theme-secondary-bg-color,#111827); 
+            color: var(--tg-theme-text-color,#e5e7eb);
+        }
+
         /* Стили для карточек учителей */
         .teacher-card {
             background: var(--tg-theme-secondary-bg-color,#111827);
@@ -71,10 +98,37 @@
         }
 
         @media (min-width: 760px) {
-            .item { display:flex; align-items:center; gap:12px; }
-            .row-top { flex:1 1 auto; margin:0; }
-            .row-bottom { flex:0 0 auto; margin:0; justify-content:flex-end; gap:12px; }
-            .row-bottom > div { display:flex; align-items:center; gap:10px; }
+            .row {
+                flex-wrap: nowrap; /* ✅ не переносим элементы */
+            }
+
+            .row-top {
+                flex: 1 1 auto;
+                margin: 0;
+            }
+
+            .row-bottom {
+                flex: 0 0 auto;
+                margin: 0;
+                justify-content: flex-end;
+                gap: 12px;
+            }
+
+            .row-bottom > div {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+
+            .row-top { margin-bottom:8px; }
+        }
+
+        @media (min-width: 1440px) {
+            .item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
         }
     </style>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -168,17 +222,11 @@
             wrap.innerHTML = `
                 <div class="row row-top">
                     <input type="text" placeholder="Фамилия" value="${String(lastName).replaceAll('"','&quot;')}">
-                </div>
-                <div class="row row-top">
                     <input type="text" placeholder="Имя" value="${String(firstName).replaceAll('"','&quot;')}">
-                </div>
-                <div class="row row-top">
                     <input type="text" placeholder="Отчество" value="${String(middleName).replaceAll('"','&quot;')}">
                 </div>
                 <div class="row row-top">
                     <input type="email" placeholder="Email (необязательно)" value="${String(email).replaceAll('"','&quot;')}">
-                </div>
-                <div class="row row-top">
                     <input type="tel" placeholder="Телефон (необязательно)" value="${String(phone).replaceAll('"','&quot;')}">
                 </div>
                 <div class="row row-top">
@@ -230,7 +278,7 @@
                 const additionalInfo = r.querySelector('textarea').value.trim(); 
                 const teacherId = r.querySelector('input[type="hidden"]').value;
                 
-                if(lastName && firstName) res.push([lastName, firstName, middleName, email, phone, teacherId, additionalInfo]); 
+                if(lastName && firstName && middleName) res.push([lastName, firstName, middleName, email, phone, teacherId, additionalInfo]); 
             });
             return res;
         }
