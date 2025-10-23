@@ -424,10 +424,7 @@
             <h3 id="modal-title">Добавить урок</h3>
             <input type="text" id="room-input" placeholder="Номер кабинета">
             <div id="teacher-selection" style="margin: 10px 0;">
-                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Учитель (необязательно):</label>
-                <select id="teacher-select" style="width: 100%; padding: 8px; border: 2px solid var(--tg-theme-hint-color,#374151); background: var(--tg-theme-secondary-bg-color,#111827); color: var(--tg-theme-text-color,#e5e7eb); border-radius: 8px; font-size: 14px;">
-                    <option value="">Без учителя</option>
-                </select>
+                <!-- Селекты для учителей будут добавлены динамически -->
             </div>
             <div class="modal-buttons">
                 <button class="cancel" onclick="closeModal()">Отмена</button>
@@ -939,26 +936,46 @@
                     // Проверяем, есть ли урок в этой ячейке
                     const cellData = currentSchedule[cellId];
                     if (cellData) {
-                        const [lessonId, room, teacherId] = cellData;
+                        const [lessonId, room, teacherData] = cellData;
                         const currentLessons = collectAdd();
                         const lesson = currentLessons.find(l => l[3] === lessonId);
                         if (lesson) {
-                            const [name, color] = lesson;
+                            const [name, color, hasSub] = lesson;
                             
-                            // Находим учителя
-                            let teacherName = '';
-                            if (teacherId) {
-                                const teacher = teachers.find(t => t[5] === teacherId);
-                                if (teacher) {
-                                    const [lastName, firstName, middleName] = teacher;
-                                    teacherName = `${lastName} ${firstName} ${middleName}`.trim();
+                            // Формируем текст с учителями
+                            let teacherText = '';
+                            if (hasSub && subgroups > 1 && Array.isArray(teacherData)) {
+                                // Для подгрупп показываем учителей через запятую
+                                const teacherNames = teacherData.map((teacherId, index) => {
+                                    if (teacherId) {
+                                        const teacher = teachers.find(t => t[5] === teacherId);
+                                        if (teacher) {
+                                            const [lastName, firstName, middleName] = teacher;
+                                            return `${lastName} ${firstName.charAt(0)}.${middleName ? ' ' + middleName.charAt(0) + '.' : ''}`;
+                                        }
+                                    }
+                                    return null;
+                                }).filter(n => n);
+                                
+                                if (teacherNames.length > 0) {
+                                    teacherText = teacherNames.join(', ');
+                                }
+                            } else {
+                                // Для обычного урока показываем одного учителя
+                                const teacherId = Array.isArray(teacherData) ? teacherData[0] : teacherData;
+                                if (teacherId) {
+                                    const teacher = teachers.find(t => t[5] === teacherId);
+                                    if (teacher) {
+                                        const [lastName, firstName, middleName] = teacher;
+                                        teacherText = `${lastName} ${firstName} ${middleName}`.trim();
+                                    }
                                 }
                             }
                             
                             cell.innerHTML = `
                                 <div style="font-weight: bold; font-size: 8px; margin-bottom: 1px;">${name}</div>
                                 <div style="font-size: 7px; opacity: 0.8;">${room}</div>
-                                ${teacherName ? `<div style="font-size: 6px; opacity: 0.7; margin-top: 1px;">${teacherName}</div>` : ''}
+                                ${teacherText ? `<div style="font-size: 6px; opacity: 0.7; margin-top: 1px;">${teacherText}</div>` : ''}
                             `;
                             cell.style.backgroundColor = color;
                             cell.style.color = '#fff';
@@ -976,25 +993,45 @@
         function selectCell(cellId) {
             // Если в ячейке уже есть урок, показываем опции редактирования
             if (currentSchedule[cellId]) {
-                const [lessonId, room, teacherId] = currentSchedule[cellId];
+                const [lessonId, room, teacherData] = currentSchedule[cellId];
                 const currentLessons = collectAdd();
                 const lesson = currentLessons.find(l => l[3] === lessonId);
                 if (lesson) {
                     const [name, color, hasSub] = lesson;
                     
-                    // Находим имя учителя
-                    let teacherName = '';
-                    if (teacherId) {
-                        const teacher = teachers.find(t => t[5] === teacherId);
-                        if (teacher) {
-                            const [lastName, firstName, middleName] = teacher;
-                            teacherName = ` (${lastName} ${firstName} ${middleName}`.trim() + ')';
+                    // Формируем текст с учителями
+                    let teacherText = '';
+                    if (hasSub && subgroups > 1 && Array.isArray(teacherData)) {
+                        // Для подгрупп показываем всех учителей
+                        const teacherNames = teacherData.map((teacherId, index) => {
+                            if (teacherId) {
+                                const teacher = teachers.find(t => t[5] === teacherId);
+                                if (teacher) {
+                                    const [lastName, firstName, middleName] = teacher;
+                                    return `${lastName} ${firstName} ${middleName}`.trim();
+                                }
+                            }
+                            return null;
+                        }).filter(n => n);
+                        
+                        if (teacherNames.length > 0) {
+                            teacherText = ` (${teacherNames.join(', ')})`;
+                        }
+                    } else {
+                        // Для обычного урока показываем одного учителя
+                        const teacherId = Array.isArray(teacherData) ? teacherData[0] : teacherData;
+                        if (teacherId) {
+                            const teacher = teachers.find(t => t[5] === teacherId);
+                            if (teacher) {
+                                const [lastName, firstName, middleName] = teacher;
+                                teacherText = ` (${lastName} ${firstName} ${middleName}`.trim() + ')';
+                            }
                         }
                     }
                     
                     if (deleteMode) {
                         // В режиме удаления предлагаем удалить урок из ячейки
-                        showNotification('Удалить урок?', `Удалить урок "${name}" (${room})${teacherName} из этой ячейки?`, 'question', (confirmed) => {
+                        showNotification('Удалить урок?', `Удалить урок "${name}" (${room})${teacherText} из этой ячейки?`, 'question', (confirmed) => {
                             if (confirmed) {
                                 delete currentSchedule[cellId];
                                 renderSchedule();
@@ -1003,7 +1040,7 @@
                         });
                     } else {
                         // В обычном режиме предлагаем заменить урок
-                        showNotification('Заменить урок?', `В ячейке уже есть урок "${name}" (${room})${teacherName}. Заменить на другой урок?`, 'question', (confirmed) => {
+                        showNotification('Заменить урок?', `В ячейке уже есть урок "${name}" (${room})${teacherText}. Заменить на другой урок?`, 'question', (confirmed) => {
                             if (confirmed) {
                                 // Выбираем этот урок для замены
                                 selectedLesson = lessonId;
@@ -1041,37 +1078,96 @@
             const modal = document.getElementById('room-modal');
             const title = document.getElementById('modal-title');
             const input = document.getElementById('room-input');
-            const teacherSelect = document.getElementById('teacher-select');
+            const teacherSelection = document.getElementById('teacher-selection');
             
             if (hasSub && subgroups > 1) {
                 title.textContent = `${lessonName} - Подгруппы`;
                 input.placeholder = 'Кабинеты для подгрупп (через запятую): 101, 102, 103';
+                
+                // Создаем селекты для каждой подгруппы
+                teacherSelection.innerHTML = '';
+                for (let i = 0; i < subgroups; i++) {
+                    const label = document.createElement('label');
+                    label.style.display = 'block';
+                    label.style.marginBottom = '5px';
+                    label.style.fontSize = '14px';
+                    label.textContent = `Учитель для подгруппы ${i + 1} (необязательно):`;
+                    
+                    const select = document.createElement('select');
+                    select.className = 'teacher-subgroup-select';
+                    select.dataset.subgroup = i;
+                    select.style.width = '100%';
+                    select.style.padding = '8px';
+                    select.style.border = '2px solid var(--tg-theme-hint-color,#374151)';
+                    select.style.background = 'var(--tg-theme-secondary-bg-color,#111827)';
+                    select.style.color = 'var(--tg-theme-text-color,#e5e7eb)';
+                    select.style.borderRadius = '8px';
+                    select.style.fontSize = '14px';
+                    select.style.marginBottom = '10px';
+                    
+                    select.innerHTML = '<option value="">Без учителя</option>';
+                    teachers.forEach(teacher => {
+                        const [lastName, firstName, middleName, email, phone, teacherId, additionalInfo] = teacher;
+                        const fullName = `${lastName} ${firstName} ${middleName}`.trim();
+                        const option = document.createElement('option');
+                        option.value = teacherId;
+                        option.textContent = fullName;
+                        select.appendChild(option);
+                    });
+                    
+                    // Проверяем, есть ли уже учитель для этой подгруппы
+                    const cellData = currentSchedule[cellId];
+                    if (cellData && cellData.length >= 3) {
+                        const teacherData = cellData[2];
+                        if (Array.isArray(teacherData) && teacherData[i]) {
+                            select.value = teacherData[i] || '';
+                        }
+                    }
+                    
+                    teacherSelection.appendChild(label);
+                    teacherSelection.appendChild(select);
+                }
             } else {
                 title.textContent = `${lessonName} - Кабинет`;
                 input.placeholder = 'Номер кабинета: 101';
+                
+                // Создаем один селект для обычного урока
+                teacherSelection.innerHTML = '<label style="display: block; margin-bottom: 5px; font-size: 14px;">Учитель (необязательно):</label>';
+                const select = document.createElement('select');
+                select.id = 'teacher-select';
+                select.style.width = '100%';
+                select.style.padding = '8px';
+                select.style.border = '2px solid var(--tg-theme-hint-color,#374151)';
+                select.style.background = 'var(--tg-theme-secondary-bg-color,#111827)';
+                select.style.color = 'var(--tg-theme-text-color,#e5e7eb)';
+                select.style.borderRadius = '8px';
+                select.style.fontSize = '14px';
+                
+                select.innerHTML = '<option value="">Без учителя</option>';
+                teachers.forEach(teacher => {
+                    const [lastName, firstName, middleName, email, phone, teacherId, additionalInfo] = teacher;
+                    const fullName = `${lastName} ${firstName} ${middleName}`.trim();
+                    const option = document.createElement('option');
+                    option.value = teacherId;
+                    option.textContent = fullName;
+                    select.appendChild(option);
+                });
+                
+                // Проверяем, есть ли уже учитель в этой ячейке
+                const cellData = currentSchedule[cellId];
+                if (cellData && cellData.length >= 3) {
+                    const teacherData = cellData[2];
+                    if (Array.isArray(teacherData)) {
+                        select.value = teacherData[0] || '';
+                    } else {
+                        select.value = teacherData || '';
+                    }
+                }
+                
+                teacherSelection.appendChild(select);
             }
+            
             input.value = '';
-            
-            // Заполняем список учителей
-            teacherSelect.innerHTML = '<option value="">Без учителя</option>';
-            teachers.forEach(teacher => {
-                const [lastName, firstName, middleName, email, phone, teacherId, additionalInfo] = teacher;
-                const fullName = `${lastName} ${firstName} ${middleName}`.trim();
-                const option = document.createElement('option');
-                option.value = teacherId;
-                option.textContent = fullName;
-                teacherSelect.appendChild(option);
-            });
-            
-            // Проверяем, есть ли уже учитель в этой ячейке
-            const cellData = currentSchedule[cellId];
-            if (cellData && cellData.length >= 3) {
-                const [, , teacherId] = cellData;
-                teacherSelect.value = teacherId || '';
-            } else {
-                teacherSelect.value = '';
-            }
-            
             modal.style.display = 'block';
             
             // Сохраняем данные для модального окна
@@ -1086,9 +1182,7 @@
         
         function saveLesson() {
             const input = document.getElementById('room-input');
-            const teacherSelect = document.getElementById('teacher-select');
             const room = input.value.trim();
-            const teacherId = teacherSelect.value || null;
             
             if (!window.modalData) return;
             
@@ -1099,6 +1193,7 @@
             }
             
             const { cellId, lessonId, hasSub } = window.modalData;
+            let teacherData = null;
             
             if (hasSub && subgroups > 1) {
                 // Валидация для подгрупп
@@ -1114,15 +1209,27 @@
                         return;
                     }
                 }
+                
+                // Собираем учителей для подгрупп
+                const teacherSelects = document.querySelectorAll('.teacher-subgroup-select');
+                const teachers = [];
+                teacherSelects.forEach(select => {
+                    teachers.push(select.value || null);
+                });
+                teacherData = teachers;
             } else {
                 // Валидация для обычного урока
                 if (!/^[0-9A-Za-z-]+$/.test(room)) {
                     showNotification('Неверный формат кабинета', 'Номер кабинета должен содержать только цифры, буквы и дефисы', 'error');
                     return;
                 }
+                
+                // Получаем учителя для обычного урока
+                const teacherSelect = document.getElementById('teacher-select');
+                teacherData = teacherSelect ? (teacherSelect.value || null) : null;
             }
             
-            addLessonToCell(cellId, lessonId, room, teacherId);
+            addLessonToCell(cellId, lessonId, room, teacherData);
             closeModal();
         }
         
