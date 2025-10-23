@@ -28,6 +28,7 @@
         .rm.disabled { opacity:.6; pointer-events:none; cursor:default; }
         .toggle { background:#ffffff08; border:1px solid var(--tg-theme-hint-color,#374151); border-radius:10px; padding:6px 10px; }
         .toggle input[type="checkbox"] { width:16px; height:16px; }
+        .toggle input[type="radio"] { width:16px; height:16px; }
         /* Subgroup select styled as a single standalone control */
         select.subgroup { 
             appearance: none; -webkit-appearance: none; -moz-appearance: none;
@@ -58,7 +59,7 @@
         }
         .hint { font-size:12px; opacity:.7; margin:6px 0 0; }
         /* Pointer cursor on interactive elements */
-        .buttons button, #save-all, .rm:not(.disabled), .toggle, input[type="checkbox"] { cursor: pointer; }
+        .buttons button, #save-all, .rm:not(.disabled), .toggle, input[type="checkbox"], input[type="radio"] { cursor: pointer; }
 
         @media (min-width:420px) {
             .section { padding:12px; }
@@ -90,7 +91,10 @@
                 <h1>👥 Ученики</h1>
                 <div class="section" id="students-section">
                     <h3>➕ Добавление учеников</h3>
-                    <p class="hint">Поля: имя, фамилия, уникальный код, флажок староста, подгруппа.</p>
+                    <p class="hint">Поля: имя, фамилия, уникальный код, выбор старосты (только один), подгруппа.</p>
+                    <div style="margin-bottom: 10px;">
+                        <label class="toggle"><input type="radio" name="leader" value="none" checked> Нет старосты</label>
+                    </div>
                     <div id="students-list"></div>
                     <div class="buttons"><button id="add-student" class="ghost">Добавить ученика</button></div>
                 </div>
@@ -136,8 +140,8 @@
             const l = String(inputs[1]?.value || '').trim();
             const cEl = inputs[2] || null;
             const c = cEl ? String(cEl.value || '').trim() : '';
-            const cb = row.querySelector('input[type="checkbox"]');
-            const leader = cb ? Boolean(cb.checked) : false;
+            const rb = row.querySelector('input[type="radio"][name="leader"]');
+            const leader = rb ? Boolean(rb.checked) : false;
             const hasId = row.hasAttribute('data-user-id');
             const id = hasId ? Number(row.dataset.userId) : null;
             const subgroup = getSelectedSubgroup(row);
@@ -194,7 +198,7 @@
                     <input class="code" type="text" placeholder="Уникальный код" value="${String(code).replaceAll('"','&quot;')}">
                 </div>
                 <div class="row row-bottom">
-                    <label class="toggle"><input type="checkbox" ${isLeader ? 'checked' : ''}> Староста</label>
+                    <label class="toggle"><input type="radio" name="leader" ${isLeader ? 'checked' : ''}> Староста</label>
                     <button class="rm">Удалить</button>
                 </div>
             `;
@@ -212,18 +216,20 @@
             }
             wrap.querySelector('.rm').onclick = () => { wrap.remove(); refreshSaveState(); };
             // подписки на изменения
-            const inputs = wrap.querySelectorAll('input[type="text"], input[type="checkbox"]');
-            inputs.forEach(inp => inp.addEventListener(inp.type==='checkbox'?'change':'input', refreshSaveState));
+            const inputs = wrap.querySelectorAll('input[type="text"], input[type="radio"]');
+            inputs.forEach(inp => inp.addEventListener(inp.type==='radio'?'change':'input', refreshSaveState));
             return wrap;
         }
 
         function render(){
             list.innerHTML = '';
+            let hasLeader = false;
             if (Array.isArray(prefilledStudents) && prefilledStudents.length) {
                 prefilledStudents.forEach(s => {
                     const f = String((s && s.first_name) || '');
                     const l = String((s && s.last_name) || '');
                     const leader = Boolean((s && s.leader) || false);
+                    if (leader) hasLeader = true;
                     const id = (s && (s.id ?? s.user_id)) ?? null;
                     const role = Number((s && s.role) ?? 0);
                     const subgroup = Math.min(Number((s && s.subgroup) ?? 1) || 1, SUBGROUPS_COUNT);
@@ -245,6 +251,13 @@
             } else {
                 list.appendChild(createStudentRow('', '', '', false, null, 1, 0));
             }
+            
+            // Если нет старосты среди учеников, выбираем "Нет старосты"
+            const noLeaderRadio = document.querySelector('input[type="radio"][name="leader"][value="none"]');
+            if (noLeaderRadio && !hasLeader) {
+                noLeaderRadio.checked = true;
+            }
+            
             initialSnapshot = snapshotCurrentStudents();
             refreshSaveState();
         }
@@ -259,8 +272,8 @@
                 const f = inputs[0].value.trim();
                 const l = inputs[1].value.trim();
                 const c = inputs[2] ? inputs[2].value.trim() : '';
-                const cb = r.querySelector('input[type="checkbox"]');
-                const leader = cb ? cb.checked : false;
+                const rb = r.querySelector('input[type="radio"][name="leader"]');
+                const leader = rb ? rb.checked : false;
                 const hasId = r.hasAttribute('data-user-id');
                 const id = hasId ? Number(r.dataset.userId) : null;
                 const subgroup = getSelectedSubgroup(r);
@@ -283,6 +296,12 @@
             });
             
             return { students: res, removedIds: removedIds };
+        }
+
+        // Обработчик для радиокнопки "Нет старосты"
+        const noLeaderRadio = document.querySelector('input[type="radio"][name="leader"][value="none"]');
+        if (noLeaderRadio) {
+            noLeaderRadio.addEventListener('change', refreshSaveState);
         }
 
         document.getElementById('add-student').onclick = () => { list.appendChild(createStudentRow()); refreshSaveState(); };
