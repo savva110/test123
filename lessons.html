@@ -1080,6 +1080,10 @@
             const input = document.getElementById('room-input');
             const teacherSelection = document.getElementById('teacher-selection');
             
+            // Получаем текущие данные ячейки
+            const cellData = currentSchedule[cellId];
+            const existingRoom = cellData ? cellData[1] : '';
+            
             if (hasSub && subgroups > 1) {
                 title.textContent = `${lessonName} - Подгруппы`;
                 input.placeholder = 'Кабинеты для подгрупп (через запятую): 101, 102, 103';
@@ -1116,7 +1120,6 @@
                     });
                     
                     // Проверяем, есть ли уже учитель для этой подгруппы
-                    const cellData = currentSchedule[cellId];
                     if (cellData && cellData.length >= 3) {
                         const teacherData = cellData[2];
                         if (Array.isArray(teacherData) && teacherData[i]) {
@@ -1154,7 +1157,6 @@
                 });
                 
                 // Проверяем, есть ли уже учитель в этой ячейке
-                const cellData = currentSchedule[cellId];
                 if (cellData && cellData.length >= 3) {
                     const teacherData = cellData[2];
                     if (Array.isArray(teacherData)) {
@@ -1167,7 +1169,8 @@
                 teacherSelection.appendChild(select);
             }
             
-            input.value = '';
+            // Заполняем поле кабинета текущим значением
+            input.value = existingRoom;
             modal.style.display = 'block';
             
             // Сохраняем данные для модального окна
