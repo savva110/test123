@@ -289,20 +289,8 @@
         document.getElementById('save-all').onclick = () => {
             const data = collectStudents();
             tg.sendData(JSON.stringify({ action: 'add_students', students: data.students, removedIds: data.removedIds }));
-            // После сохранения скрываем поля кода у добавленных строк
-            const rows = list.querySelectorAll('.item');
-            rows.forEach(r => {
-                if (!r.dataset.userId) {
-                    const codeInput = r.querySelector('.code');
-                    if (codeInput && codeInput.value.trim()) {
-                        codeInput.value = '';
-                        codeInput.style.display = 'none';
-                    }
-                }
-            });
-            // обновляем снапшот и блокируем кнопку до следующего изменения
-            initialSnapshot = snapshotCurrentStudents();
-            refreshSaveState();
+            // Закрываем WebApp после сохранения, чтобы при повторном открытии загрузились актуальные данные с ID
+            tg.close();
         };
 
         render();
