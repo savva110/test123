@@ -270,8 +270,21 @@
             absenceTimesContainer.addEventListener('change', (e) => {
                 if (e.target.type === 'time') {
                     const index = parseInt(e.target.dataset.index);
+                    const newValue = e.target.value;
+                    
                     if (!isNaN(index) && index >= 0 && index < currentAbsenceTimes.length) {
-                        currentAbsenceTimes[index] = e.target.value;
+                        // Проверяем, нет ли уже такого времени
+                        const duplicateIndex = currentAbsenceTimes.findIndex((time, i) => i !== index && time === newValue);
+                        
+                        if (duplicateIndex !== -1) {
+                            // Если такое время уже есть, показываем ошибку и возвращаем старое значение
+                            showStatus(`❌ Время ${newValue} уже выбрано`, 'error', 'status-absence-time');
+                            // Возвращаем предыдущее значение
+                            e.target.value = currentAbsenceTimes[index];
+                            return;
+                        }
+                        
+                        currentAbsenceTimes[index] = newValue;
                         refreshButtonsState();
                     }
                 }
@@ -294,8 +307,32 @@
         const addAbsenceTimeBtn = document.getElementById('add-absence-time');
         if (addAbsenceTimeBtn) {
             addAbsenceTimeBtn.addEventListener('click', () => {
-                // Добавляем новое пустое время
-                currentAbsenceTimes.push('09:00');
+                // Находим свободное время (избегаем дубликатов)
+                let newTime = '09:00';
+                let hour = 9;
+                
+                // Ищем первое свободное время начиная с 09:00
+                while (currentAbsenceTimes.includes(newTime) && hour < 24) {
+                    hour++;
+                    newTime = `${hour.toString().padStart(2, '0')}:00`;
+                }
+                
+                // Если все времена заняты, используем следующий свободный час
+                if (currentAbsenceTimes.includes(newTime)) {
+                    // Если уже 24 часа использованы, берем минуты
+                    for (let h = 0; h < 24; h++) {
+                        for (let m = 0; m < 60; m += 30) {
+                            const testTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                            if (!currentAbsenceTimes.includes(testTime)) {
+                                newTime = testTime;
+                                break;
+                            }
+                        }
+                        if (!currentAbsenceTimes.includes(newTime)) break;
+                    }
+                }
+                
+                currentAbsenceTimes.push(newTime);
                 renderAbsenceTimes();
                 refreshButtonsState();
             });
