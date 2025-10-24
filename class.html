@@ -91,24 +91,15 @@
         let currentAbsenceTimes = [];
         try {
             const timeRaw = params.get('absence_notification_time');
-            console.log('URL параметр absence_notification_time:', timeRaw);
             if (timeRaw) {
                 const parsed = JSON.parse(timeRaw);
-                console.log('Распарсенное значение:', parsed);
                 if (Array.isArray(parsed)) {
                     currentAbsenceTimes = parsed.filter(t => typeof t === 'string' && t.trim());
-                    console.log('После фильтрации:', currentAbsenceTimes);
                 } else if (typeof parsed === 'string' && parsed.trim()) {
                     currentAbsenceTimes = [parsed.trim()];
-                    console.log('Преобразовано в массив:', currentAbsenceTimes);
                 }
-            } else {
-                console.log('absence_notification_time отсутствует в URL параметрах');
             }
-        } catch(e) { 
-            console.error('Ошибка парсинга absence_notification_time:', e);
-        }
-        console.log('Финальное значение currentAbsenceTimes:', currentAbsenceTimes);
+        } catch(e) { /* ignore */ }
         
         // Функция для показа статуса
         function showStatus(message, type, targetId = 'status') {

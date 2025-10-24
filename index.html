@@ -193,6 +193,7 @@ function setupTelegramFeatures() {
         if (src.searchParams.get('subgroups')) params.set('subgroups', src.searchParams.get('subgroups'));
         if (src.searchParams.get('weekdays')) params.set('weekdays', src.searchParams.get('weekdays'));
         if (src.searchParams.get('students')) params.set('students', src.searchParams.get('students'));
+        if (src.searchParams.get('absence_notification_time')) params.set('absence_notification_time', src.searchParams.get('absence_notification_time'));
         const q = params.toString();
         window.location.href = to + (q ? ('?' + q) : '');
     }
