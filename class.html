@@ -9,7 +9,7 @@
         h1 { margin: 0 0 12px; font-size: 20px; }
         .section { background: var(--tg-theme-secondary-bg-color,#f5f5f5); border-radius: 12px; padding: 14px; border-left: 4px solid var(--tg-theme-button-color,#2481cc); margin-bottom: 12px; }
         .row { display:flex; gap:8px; align-items:center; }
-        input[type="text"] { flex: 1; padding: 10px; border: 2px solid var(--tg-theme-hint-color,#ccc); border-radius: 10px; font-size: 14px; }
+        input[type="text"], input[type="time"] { flex: 1; padding: 10px; border: 2px solid var(--tg-theme-hint-color,#ccc); border-radius: 10px; font-size: 14px; }
         .buttons { display:flex; gap:8px; margin-top: 12px; }
         .buttons button { background: var(--tg-theme-button-color,#2481cc); color: var(--tg-theme-button-text-color,#fff); border:none; padding:12px 14px; border-radius:10px; }
         .ghost { background: transparent; color: var(--tg-theme-button-color,#2481cc); border:1px solid var(--tg-theme-button-color,#2481cc); }
@@ -87,6 +87,19 @@
                 }
             }
         } catch(e) { /* ignore */ }
+        // Время уведомления об отсутствующих (массив)
+        let currentAbsenceTimes = [];
+        try {
+            const timeRaw = params.get('absence_notification_time');
+            if (timeRaw) {
+                const parsed = JSON.parse(timeRaw);
+                if (Array.isArray(parsed)) {
+                    currentAbsenceTimes = parsed.filter(t => typeof t === 'string' && t.trim());
+                } else if (typeof parsed === 'string' && parsed.trim()) {
+                    currentAbsenceTimes = [parsed.trim()];
+                }
+            }
+        } catch(e) { /* ignore */ }
         
         // Функция для показа статуса
         function showStatus(message, type, targetId = 'status') {
@@ -136,7 +149,8 @@
         const initial = {
             name: String(prefilled || '').trim(),
             subgroups: currentSubgroups,
-            weekdays: [...currentWeekdays]
+            weekdays: [...currentWeekdays],
+            absenceTimes: [...currentAbsenceTimes]
         };
         function isEqualWeekdays(a, b){
             if (!Array.isArray(a) || !Array.isArray(b)) return false;
@@ -148,14 +162,17 @@
             const nameNow = String(document.getElementById('class-name').value || '').trim();
             const wdNow = [...currentWeekdays].sort((a,b)=>a-b);
             const wdInit = [...initial.weekdays].sort((a,b)=>a-b);
+            const timesNow = [...currentAbsenceTimes].sort();
+            const timesInit = [...initial.absenceTimes].sort();
             
             // Проверяем, есть ли изменения в любом из полей
             const hasNameChanges = nameNow !== initial.name;
             const hasSubgroupsChanges = currentSubgroups !== initial.subgroups;
             const hasWeekdaysChanges = !isEqualWeekdays(wdNow, wdInit);
+            const hasTimeChanges = !isEqualWeekdays(timesNow, timesInit);
             
             // Блокируем кнопку только если нет изменений
-            const hasAnyChanges = hasNameChanges || hasSubgroupsChanges || hasWeekdaysChanges;
+            const hasAnyChanges = hasNameChanges || hasSubgroupsChanges || hasWeekdaysChanges || hasTimeChanges;
             setDisabled(saveAllBtn, !hasAnyChanges);
         }
         
@@ -181,6 +198,117 @@
             sections[1].insertAdjacentElement('afterend', weekdaysSection);
         } else {
             document.body.appendChild(weekdaysSection);
+        }
+        
+        // UI для выбора времени уведомления об отсутствующих
+        const absenceTimeSection = document.createElement('div');
+        absenceTimeSection.className = 'section';
+        absenceTimeSection.innerHTML = `
+            <h3>⏰ Уведомление об отсутствующих</h3>
+            <p style="font-size: 13px; margin: 8px 0; opacity: 0.8;">Выберите время отправки информации о том, кто отсутствует</p>
+            <div id="absence-times-container"></div>
+            <div style="margin-top: 8px; display: flex; gap: 8px;">
+                <button id="add-absence-time" style="background: var(--tg-theme-button-color,#2481cc); color: var(--tg-theme-button-text-color,#fff); border: none; padding: 10px 14px; border-radius: 10px; font-size: 13px; cursor: pointer;">➕ Добавить время</button>
+                <button id="clear-all-absence-times" style="background: #e53935; color: #fff; border: none; padding: 10px 14px; border-radius: 10px; font-size: 13px; cursor: pointer;">🗑️ Удалить всё</button>
+            </div>
+            <div id="status-absence-time"></div>
+        `;
+        // Вставим секцию после дней недели
+        weekdaysSection.insertAdjacentElement('afterend', absenceTimeSection);
+        
+        const absenceTimesContainer = document.getElementById('absence-times-container');
+        
+        // Функция для рендеринга полей времени
+        function renderAbsenceTimes() {
+            if (!absenceTimesContainer) return;
+            absenceTimesContainer.innerHTML = '';
+            
+            if (currentAbsenceTimes.length === 0) {
+                absenceTimesContainer.innerHTML = '<p style="font-size: 13px; opacity: 0.6; margin: 8px 0;">Уведомления отключены</p>';
+                return;
+            }
+            
+            currentAbsenceTimes.forEach((time, index) => {
+                const timeRow = document.createElement('div');
+                timeRow.style.display = 'flex';
+                timeRow.style.gap = '8px';
+                timeRow.style.marginBottom = '8px';
+                timeRow.style.alignItems = 'center';
+                
+                const timeInput = document.createElement('input');
+                timeInput.type = 'time';
+                timeInput.value = time;
+                timeInput.style.flex = '1';
+                timeInput.style.padding = '10px';
+                timeInput.style.border = '2px solid var(--tg-theme-hint-color,#ccc)';
+                timeInput.style.borderRadius = '10px';
+                timeInput.style.fontSize = '14px';
+                timeInput.dataset.index = index;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.textContent = '✖️';
+                removeBtn.style.background = '#e53935';
+                removeBtn.style.color = '#fff';
+                removeBtn.style.border = 'none';
+                removeBtn.style.padding = '10px 14px';
+                removeBtn.style.borderRadius = '10px';
+                removeBtn.style.fontSize = '14px';
+                removeBtn.style.minWidth = '45px';
+                removeBtn.style.cursor = 'pointer';
+                removeBtn.dataset.index = index;
+                
+                timeRow.appendChild(timeInput);
+                timeRow.appendChild(removeBtn);
+                absenceTimesContainer.appendChild(timeRow);
+            });
+        }
+        
+        renderAbsenceTimes();
+        
+        // Делегирование событий для динамических полей времени
+        if (absenceTimesContainer) {
+            absenceTimesContainer.addEventListener('change', (e) => {
+                if (e.target.type === 'time') {
+                    const index = parseInt(e.target.dataset.index);
+                    if (!isNaN(index) && index >= 0 && index < currentAbsenceTimes.length) {
+                        currentAbsenceTimes[index] = e.target.value;
+                        refreshButtonsState();
+                    }
+                }
+            });
+            
+            absenceTimesContainer.addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-index]');
+                if (btn) {
+                    const index = parseInt(btn.dataset.index);
+                    if (!isNaN(index) && index >= 0 && index < currentAbsenceTimes.length) {
+                        currentAbsenceTimes.splice(index, 1);
+                        renderAbsenceTimes();
+                        refreshButtonsState();
+                    }
+                }
+            });
+        }
+        
+        // Кнопка добавления нового времени
+        const addAbsenceTimeBtn = document.getElementById('add-absence-time');
+        if (addAbsenceTimeBtn) {
+            addAbsenceTimeBtn.addEventListener('click', () => {
+                // Добавляем новое пустое время
+                currentAbsenceTimes.push('09:00');
+                renderAbsenceTimes();
+                refreshButtonsState();
+            });
+        }
+        
+        // Кнопка очистки всех времен
+        const clearAllAbsenceTimesBtn = document.getElementById('clear-all-absence-times');
+        if (clearAllAbsenceTimesBtn) {
+            clearAllAbsenceTimesBtn.addEventListener('click', () => {
+                currentAbsenceTimes = [];
+                renderAbsenceTimes();
+                refreshButtonsState();
+            });
         }
         
         const weekdaysContainer = weekdaysSection.querySelector('#weekdays-options');
@@ -246,17 +374,30 @@
             showStatus('⏳ Сохранение...', 'loading');
             
             // Отправляем все данные одним запросом
-            tg.sendData(JSON.stringify({ 
+            const payload = { 
                 action: 'save_class_settings',
                 name: name,
                 subgroups: currentSubgroups,
                 weekdays: normalized
-            }));
+            };
+            
+            // Добавляем массив времен уведомлений
+            // Фильтруем пустые времена и удаляем дубликаты
+            const validTimes = [...new Set(currentAbsenceTimes.filter(t => t && t.trim()))];
+            if (validTimes.length > 0) {
+                payload.absence_notification_time = validTimes;
+            } else {
+                // Отправляем пустой массив чтобы удалить настройку
+                payload.absence_notification_time = [];
+            }
+            
+            tg.sendData(JSON.stringify(payload));
             
             // Обновляем начальные значения
             initial.name = name;
             initial.subgroups = currentSubgroups;
             initial.weekdays = [...normalized];
+            initial.absenceTimes = [...validTimes];
             refreshButtonsState();
         };
         
