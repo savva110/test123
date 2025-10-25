@@ -56,13 +56,13 @@
         }
 
         .student-item.absent {
-            opacity: 0.6;
-            background: #ffebee;
+            opacity: 0.7;
         }
 
         .student-item.absent:hover {
-            background: #ffcdd2;
+            opacity: 0.8;
         }
+
 
         .checkbox-wrapper {
             display: flex;
@@ -86,6 +86,12 @@
 
         .custom-checkbox.checked {
             background: var(--tg-theme-button-color, #2481cc);
+            border-color: var(--tg-theme-button-color, #2481cc);
+        }
+
+        .student-item.absent .custom-checkbox {
+            border-color: #e53935;
+            background: #ffebee;
         }
 
         .custom-checkbox .checkmark {
@@ -96,6 +102,17 @@
         }
 
         .custom-checkbox.checked .checkmark {
+            display: block;
+        }
+
+        .custom-checkbox .crossmark {
+            display: none;
+            color: #e53935;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .student-item.absent .custom-checkbox .crossmark {
             display: block;
         }
 
@@ -259,19 +276,14 @@
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
-        let tg = window.Telegram.WebApp;
+        const tg = window.Telegram.WebApp;
         let students = [];
         let attendance = {};
 
         // Инициализация приложения
         function initApp() {
-            // Показываем приложение
-            document.getElementById('app').style.display = 'block';
-            
-            // Расширяем окно если это Telegram Web App
-            if (isTelegramWebApp()) {
-                tg.expand();
-            }
+            tg.ready();
+            tg.expand();
             
             // Получаем параметры из URL
             const urlParams = new URLSearchParams(window.location.search);
@@ -294,11 +306,6 @@
             // Обработчики событий
             document.getElementById('save-btn').addEventListener('click', saveAttendance);
             document.getElementById('toggle-all').addEventListener('click', toggleAll);
-        }
-
-        // Проверяем, открыто ли в Telegram Web App
-        function isTelegramWebApp() {
-            return tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
         }
 
         // Инициализация данных посещаемости
@@ -326,6 +333,7 @@
                     <div class="checkbox-wrapper">
                         <div class="custom-checkbox ${isPresent ? 'checked' : ''}">
                             <span class="checkmark">✓</span>
+                            <span class="crossmark">✕</span>
                         </div>
                     </div>
                     <div class="student-info">
@@ -398,19 +406,7 @@
             };
             
             // Отправляем данные через Telegram Web App
-            if (isTelegramWebApp()) {
-                tg.sendData(JSON.stringify(data));
-                
-                // Закрываем Web App
-                setTimeout(() => {
-                    tg.close();
-                }, 500);
-            } else {
-                // В режиме браузера просто показываем данные
-                console.log('Данные для сохранения:', data);
-                showStatus('✅ Сохранено (режим браузера)', 'success');
-                saveBtn.disabled = false;
-            }
+            tg.sendData(JSON.stringify(data));
         }
 
         // Показать статус
