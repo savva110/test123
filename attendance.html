@@ -231,6 +231,99 @@
             margin-bottom: 15px;
         }
 
+        /* Кастомные уведомления */
+        .notification-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .notification-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .notification {
+            background: var(--tg-theme-secondary-bg-color,#111827);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 90%;
+            width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+        
+        .notification-overlay.show .notification {
+            transform: scale(1);
+        }
+        
+        .notification-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        .notification-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--tg-theme-text-color,#000000);
+        }
+        
+        .notification-message {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color,#999999);
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+        
+        .notification-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .notification-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            min-width: 80px;
+        }
+        
+        .notification-button.primary {
+            background: var(--tg-theme-button-color,#2481cc);
+            color: var(--tg-theme-button-text-color,#fff);
+        }
+        
+        .notification-button.secondary {
+            background: var(--tg-theme-hint-color,#999999);
+            color: var(--tg-theme-text-color,#000000);
+        }
+        
+        .notification-button:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        .notification-button:active {
+            transform: translateY(0);
+        }
+
         @media (max-width: 480px) {
             body {
                 padding: 15px;
@@ -262,7 +355,7 @@
                 </div>
             </div>
 
-            <button class="select-all-btn" id="toggle-all">✓ Снять всё</button>
+            <button class="select-all-btn" id="toggle-all">✗ Снять всё</button>
 
             <div class="student-list" id="student-list">
                 <!-- Список учеников будет здесь -->
@@ -274,11 +367,89 @@
         </div>
     </div>
 
+    <!-- Кастомные уведомления -->
+    <div id="notification-overlay" class="notification-overlay">
+        <div class="notification">
+            <div class="notification-icon" id="notification-icon">⚠️</div>
+            <div class="notification-title" id="notification-title">Внимание</div>
+            <div class="notification-message" id="notification-message">Сообщение</div>
+            <div class="notification-buttons" id="notification-buttons">
+                <button class="notification-button primary" id="notification-ok">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
         const tg = window.Telegram.WebApp;
         let students = [];
         let attendance = {};
+
+        // Функции для кастомных уведомлений
+        function showNotification(title, message, type = 'warning', onConfirm = null) {
+            const overlay = document.getElementById('notification-overlay');
+            const icon = document.getElementById('notification-icon');
+            const titleEl = document.getElementById('notification-title');
+            const messageEl = document.getElementById('notification-message');
+            const buttonsEl = document.getElementById('notification-buttons');
+            
+            // Устанавливаем иконку в зависимости от типа
+            const icons = {
+                'warning': '⚠️',
+                'error': '❌',
+                'success': '✅',
+                'info': 'ℹ️',
+                'question': '❓'
+            };
+            icon.textContent = icons[type] || icons['warning'];
+            
+            titleEl.textContent = title;
+            messageEl.textContent = message;
+            
+            // Очищаем кнопки
+            buttonsEl.innerHTML = '';
+            
+            if (type === 'question') {
+                // Для вопросов показываем две кнопки
+                const confirmBtn = document.createElement('button');
+                confirmBtn.className = 'notification-button primary';
+                confirmBtn.textContent = 'Да';
+                confirmBtn.onclick = () => {
+                    hideNotification();
+                    if (onConfirm) onConfirm(true);
+                };
+                
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'notification-button secondary';
+                cancelBtn.textContent = 'Нет';
+                cancelBtn.onclick = () => {
+                    hideNotification();
+                    if (onConfirm) onConfirm(false);
+                };
+                
+                buttonsEl.appendChild(confirmBtn);
+                buttonsEl.appendChild(cancelBtn);
+            } else {
+                // Для остальных типов показываем одну кнопку
+                const okBtn = document.createElement('button');
+                okBtn.className = 'notification-button primary';
+                okBtn.textContent = 'OK';
+                okBtn.onclick = () => {
+                    hideNotification();
+                    if (onConfirm) onConfirm();
+                };
+                
+                buttonsEl.appendChild(okBtn);
+            }
+            
+            // Показываем уведомление
+            overlay.classList.add('show');
+        }
+        
+        function hideNotification() {
+            const overlay = document.getElementById('notification-overlay');
+            overlay.classList.remove('show');
+        }
 
         // Инициализация приложения
         function initApp() {
@@ -373,20 +544,33 @@
             updateStats();
         }
 
-        // Переключение всех
+        // Снятие всех галочек
         function toggleAll() {
-            const allChecked = Object.values(attendance).every(v => v === true);
+            // Проверяем, есть ли хоть один отмеченный студент
+            const hasChecked = Object.values(attendance).some(v => v === true);
             
-            students.forEach(student => {
-                attendance[student.user_id] = !allChecked;
-            });
+            if (!hasChecked) {
+                // Если никто не отмечен, кнопка не должна быть доступна
+                return;
+            }
             
-            renderStudentList();
-            updateStats();
-            
-            // Обновляем текст кнопки
-            const btn = document.getElementById('toggle-all');
-            btn.textContent = allChecked ? '✓ Отметить всех' : '✗ Снять всё';
+            // Показываем подтверждение
+            showNotification(
+                'Подтверждение',
+                'Вы уверены, что хотите снять отметки у всех студентов?',
+                'question',
+                (confirmed) => {
+                    if (confirmed) {
+                        // Снимаем все галочки
+                        students.forEach(student => {
+                            attendance[student.user_id] = false;
+                        });
+                        
+                        renderStudentList();
+                        updateStats();
+                    }
+                }
+            );
         }
 
         // Обновление статистики
@@ -398,6 +582,20 @@
             document.getElementById('total-count').textContent = total;
             document.getElementById('present-count').textContent = present;
             document.getElementById('absent-count').textContent = absent;
+            
+            // Управление кнопкой "Снять всё"
+            const toggleBtn = document.getElementById('toggle-all');
+            const hasChecked = present > 0;
+            
+            if (hasChecked) {
+                toggleBtn.disabled = false;
+                toggleBtn.style.opacity = '1';
+                toggleBtn.style.cursor = 'pointer';
+            } else {
+                toggleBtn.disabled = true;
+                toggleBtn.style.opacity = '0.5';
+                toggleBtn.style.cursor = 'not-allowed';
+            }
         }
 
         // Сохранение посещаемости
@@ -449,6 +647,15 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // Закрытие модальных окон по клику вне их
+        window.onclick = (event) => {
+            const notificationOverlay = document.getElementById('notification-overlay');
+            
+            if (event.target === notificationOverlay) {
+                hideNotification();
+            }
+        };
 
         // Запускаем приложение при загрузке
         window.addEventListener('DOMContentLoaded', initApp);
