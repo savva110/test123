@@ -288,11 +288,23 @@
             // Получаем параметры из URL
             const urlParams = new URLSearchParams(window.location.search);
             const studentsParam = urlParams.get('students');
+            const attendanceParam = urlParams.get('attendance');
             
             if (studentsParam) {
                 try {
                     students = JSON.parse(decodeURIComponent(studentsParam));
-                    initAttendance();
+                    
+                    // Загружаем сохраненные статусы, если они есть
+                    let savedAttendance = {};
+                    if (attendanceParam) {
+                        try {
+                            savedAttendance = JSON.parse(decodeURIComponent(attendanceParam));
+                        } catch (e) {
+                            console.error('Ошибка парсинга статусов посещаемости:', e);
+                        }
+                    }
+                    
+                    initAttendance(savedAttendance);
                     renderStudentList();
                     updateStats();
                 } catch (e) {
@@ -309,9 +321,17 @@
         }
 
         // Инициализация данных посещаемости
-        function initAttendance() {
+        function initAttendance(savedAttendance = {}) {
             students.forEach(student => {
-                attendance[student.user_id] = true; // По умолчанию все присутствуют
+                const userId = student.user_id;
+                
+                // Если есть сохраненный статус, используем его
+                // 0 = присутствует, 1 = отсутствует
+                if (savedAttendance.hasOwnProperty(userId)) {
+                    attendance[userId] = savedAttendance[userId] === 0; // true если присутствует
+                } else {
+                    attendance[userId] = true; // По умолчанию все присутствуют
+                }
             });
         }
 
