@@ -265,22 +265,13 @@
 
         // Инициализация приложения
         function initApp() {
-            if (isTelegramWebApp()) {
-                initTelegramWebApp();
-            }
-        }
-
-        // Проверяем, открыто ли в Telegram Web App
-        function isTelegramWebApp() {
-            return tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
-        }
-
-        // Инициализация Telegram Web App
-        function initTelegramWebApp() {
-            document.getElementById('login-warning').style.display = 'none';
+            // Показываем приложение
             document.getElementById('app').style.display = 'block';
             
-            tg.expand();
+            // Расширяем окно если это Telegram Web App
+            if (isTelegramWebApp()) {
+                tg.expand();
+            }
             
             // Получаем параметры из URL
             const urlParams = new URLSearchParams(window.location.search);
@@ -293,13 +284,21 @@
                     renderStudentList();
                     updateStats();
                 } catch (e) {
+                    console.error('Ошибка парсинга данных:', e);
                     showStatus('❌ Ошибка загрузки данных', 'error');
                 }
+            } else {
+                showStatus('❌ Нет данных об учениках', 'error');
             }
             
             // Обработчики событий
             document.getElementById('save-btn').addEventListener('click', saveAttendance);
             document.getElementById('toggle-all').addEventListener('click', toggleAll);
+        }
+
+        // Проверяем, открыто ли в Telegram Web App
+        function isTelegramWebApp() {
+            return tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
         }
 
         // Инициализация данных посещаемости
@@ -399,12 +398,19 @@
             };
             
             // Отправляем данные через Telegram Web App
-            tg.sendData(JSON.stringify(data));
-            
-            // Закрываем Web App
-            setTimeout(() => {
-                tg.close();
-            }, 500);
+            if (isTelegramWebApp()) {
+                tg.sendData(JSON.stringify(data));
+                
+                // Закрываем Web App
+                setTimeout(() => {
+                    tg.close();
+                }, 500);
+            } else {
+                // В режиме браузера просто показываем данные
+                console.log('Данные для сохранения:', data);
+                showStatus('✅ Сохранено (режим браузера)', 'success');
+                saveBtn.disabled = false;
+            }
         }
 
         // Показать статус
