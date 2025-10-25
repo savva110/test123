@@ -145,6 +145,57 @@
             color: #7b1fa2;
         }
 
+        .student-badge.late {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .student-badge.will-absent {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .special-stats {
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .special-stat-item {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 8px;
+            border-left: 3px solid;
+        }
+
+        .special-stat-item.late {
+            border-left-color: #f57c00;
+        }
+
+        .special-stat-item.will-absent {
+            border-left-color: #d32f2f;
+        }
+
+        .special-icon {
+            font-size: 20px;
+            margin-right: 10px;
+        }
+
+        .special-text {
+            font-size: 14px;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .special-text strong {
+            font-weight: 600;
+        }
+
         button {
             background: var(--tg-theme-button-color, #2481cc);
             color: var(--tg-theme-button-text-color, #ffffff);
@@ -355,6 +406,18 @@
                 </div>
             </div>
 
+            <!-- Дополнительная статистика для опозданий и отсутствий -->
+            <div id="special-status-stats" class="special-stats" style="display: none;">
+                <div class="special-stat-item late" id="late-stats" style="display: none;">
+                    <span class="special-icon">⏰</span>
+                    <span class="special-text">Опоздают: <strong id="late-count">0</strong></span>
+                </div>
+                <div class="special-stat-item will-absent" id="will-absent-stats" style="display: none;">
+                    <span class="special-icon">❌</span>
+                    <span class="special-text">Не придут: <strong id="will-absent-count">0</strong></span>
+                </div>
+            </div>
+
             <button class="select-all-btn" id="toggle-all">✗ Снять всё</button>
 
             <div class="student-list" id="student-list">
@@ -384,6 +447,7 @@
         const tg = window.Telegram.WebApp;
         let students = [];
         let attendance = {};
+        let specialStatuses = {}; // Хранит специальные статусы: 2 = опоздает, 3 = не придет
 
         // Функции для кастомных уведомлений
         function showNotification(title, message, type = 'warning', onConfirm = null) {
@@ -497,9 +561,17 @@
                 const userId = student.user_id;
                 
                 // Если есть сохраненный статус, используем его
-                // 0 = присутствует, 1 = отсутствует
+                // 0 = присутствует, 1 = отсутствует, 2 = опоздает, 3 = не придет
                 if (savedAttendance.hasOwnProperty(userId)) {
-                    attendance[userId] = savedAttendance[userId] === 0; // true если присутствует
+                    const status = savedAttendance[userId];
+                    
+                    // Если статус 2 (опоздает) или 3 (не придет), сохраняем его отдельно
+                    if (status === 2 || status === 3) {
+                        specialStatuses[userId] = status;
+                        attendance[userId] = true; // По умолчанию считаем присутствующим
+                    } else {
+                        attendance[userId] = status === 0; // true если присутствует (0), false если отсутствует (1)
+                    }
                 } else {
                     attendance[userId] = true; // По умолчанию все присутствуют
                 }
@@ -513,12 +585,23 @@
             
             students.forEach(student => {
                 const isPresent = attendance[student.user_id];
+                const specialStatus = specialStatuses[student.user_id];
                 const itemDiv = document.createElement('div');
                 itemDiv.className = `student-item ${!isPresent ? 'absent' : ''}`;
                 itemDiv.onclick = () => toggleStudent(student.user_id);
                 
                 const role = student.role === 1 ? 'headman' : 'student';
                 const roleText = student.role === 1 ? '👑 Староста' : '👤 Ученик';
+                
+                // Формируем HTML для бейджей
+                let badgesHtml = `<span class="student-badge ${role}">${roleText}</span>`;
+                
+                // Добавляем специальный бейдж, если есть статус 2 или 3
+                if (specialStatus === 2) {
+                    badgesHtml += ` <span class="student-badge late">⏰ Опоздает</span>`;
+                } else if (specialStatus === 3) {
+                    badgesHtml += ` <span class="student-badge will-absent">❌ Не придет</span>`;
+                }
                 
                 itemDiv.innerHTML = `
                     <div class="checkbox-wrapper">
@@ -529,7 +612,7 @@
                     </div>
                     <div class="student-info">
                         <div class="student-name">${escapeHtml(student.name)}</div>
-                        <span class="student-badge ${role}">${roleText}</span>
+                        ${badgesHtml}
                     </div>
                 `;
                 
@@ -579,9 +662,44 @@
             const present = Object.values(attendance).filter(v => v === true).length;
             const absent = total - present;
             
+            // Подсчет специальных статусов
+            let lateCount = 0;
+            let willAbsentCount = 0;
+            
+            students.forEach(student => {
+                const status = specialStatuses[student.user_id];
+                if (status === 2) lateCount++;
+                if (status === 3) willAbsentCount++;
+            });
+            
             document.getElementById('total-count').textContent = total;
             document.getElementById('present-count').textContent = present;
             document.getElementById('absent-count').textContent = absent;
+            
+            // Отображаем специальную статистику, если есть статусы
+            const specialStatsContainer = document.getElementById('special-status-stats');
+            const lateStats = document.getElementById('late-stats');
+            const willAbsentStats = document.getElementById('will-absent-stats');
+            
+            if (lateCount > 0 || willAbsentCount > 0) {
+                specialStatsContainer.style.display = 'flex';
+                
+                if (lateCount > 0) {
+                    lateStats.style.display = 'flex';
+                    document.getElementById('late-count').textContent = lateCount;
+                } else {
+                    lateStats.style.display = 'none';
+                }
+                
+                if (willAbsentCount > 0) {
+                    willAbsentStats.style.display = 'flex';
+                    document.getElementById('will-absent-count').textContent = willAbsentCount;
+                } else {
+                    willAbsentStats.style.display = 'none';
+                }
+            } else {
+                specialStatsContainer.style.display = 'none';
+            }
             
             // Управление кнопкой "Снять всё"
             const toggleBtn = document.getElementById('toggle-all');
@@ -605,14 +723,28 @@
             showStatus('⏳ Сохранение...', 'loading');
             
             // Формируем данные для отправки
+            // Теперь мы сохраняем статусы более детально:
+            // 0 = присутствует, 1 = отсутствует, 2 = опоздает, 3 = не придет
             const presentStudents = [];
             const absentStudents = [];
+            const lateStudents = [];
+            const willAbsentStudents = [];
             
             students.forEach(student => {
-                if (attendance[student.user_id]) {
-                    presentStudents.push(student.user_id);
+                const userId = student.user_id;
+                const isPresent = attendance[userId];
+                const specialStatus = specialStatuses[userId];
+                
+                // Если есть специальный статус и ученик отмечен как присутствующий,
+                // сохраняем специальный статус
+                if (isPresent && specialStatus === 2) {
+                    lateStudents.push(userId);
+                } else if (isPresent && specialStatus === 3) {
+                    willAbsentStudents.push(userId);
+                } else if (isPresent) {
+                    presentStudents.push(userId);
                 } else {
-                    absentStudents.push(student.user_id);
+                    absentStudents.push(userId);
                 }
             });
             
@@ -620,6 +752,8 @@
                 action: 'mark_attendance',
                 present: presentStudents,
                 absent: absentStudents,
+                late: lateStudents,
+                will_absent: willAbsentStudents,
                 timestamp: new Date().toISOString()
             };
             
