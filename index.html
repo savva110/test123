@@ -5,8 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Перенаправление</title>
     <script>
-        // Перенаправление с сохранением всех параметров URL
-        window.location.href = "http://46.173.17.22" + window.location.search + window.location.hash;
+        // Сборка ссылки из параметров
+        // Для schedule: /schedule/{subgroup}/{schedule_id}
+        // Для attendance: attendance.html?schedule_id=xxx
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const subgroup = urlParams.get('subgroup');
+            const scheduleId = urlParams.get('schedule_id') || '';
+            const page = urlParams.get('page'); // Опциональный параметр для явного указания страницы
+            
+            let redirectUrl;
+            
+            if (scheduleId) {
+                // Если есть subgroup или явно указана страница schedule, собираем URL для schedule
+                if (subgroup || page === 'schedule') {
+                    const subgroupValue = subgroup || '1';
+                    redirectUrl = "http://46.173.17.22/schedule/" + subgroupValue + "/" + scheduleId;
+                } 
+                // Если нет subgroup и явно указана страница attendance, или не указана страница вообще
+                else if (page === 'attendance' || !page) {
+                    // Для attendance используем query параметры
+                    redirectUrl = "http://46.173.17.22/attendance.html?schedule_id=" + encodeURIComponent(scheduleId);
+                } else {
+                    // Для других страниц просто передаем параметры
+                    redirectUrl = "http://46.173.17.22/" + page + "?" + urlParams.toString();
+                }
+            } else {
+                // Если нет schedule_id, перенаправляем на базовый URL
+                redirectUrl = "http://46.173.17.22";
+            }
+            
+            window.location.href = redirectUrl;
+        })();
     </script>
 </head>
 <body>
@@ -15,5 +45,5 @@
     </noscript>
     <p>Перенаправление на 46.173.17.22:5000...</p>
 </body>
-
 </html>
+
